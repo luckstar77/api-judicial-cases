@@ -11,6 +11,7 @@
         -   地區
         -   勝訴方
         -   案件 ID
+        -   年份
 
 ## 資料庫
 
@@ -25,6 +26,7 @@
                 -   plaintiff
                 -   defendant
             -   rent `int`
+            -   jyear `string`
 
 ## 開發流程
 

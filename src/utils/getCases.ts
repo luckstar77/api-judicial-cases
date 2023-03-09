@@ -1,10 +1,5 @@
 import * as knex from '../db/knex';
 
-const TABLE_WIN: Map = {
-    被告: 'plaintiff',
-    原告: 'defendant',
-};
-
 interface Map {
     [key: string]: any;
     [index: number]: any;
