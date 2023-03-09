@@ -41,5 +41,5 @@ const config: Knex.Config = {
         res.send(cases);
     });
 
-    app.listen(3100);
+    app.listen(3010);
 })();
