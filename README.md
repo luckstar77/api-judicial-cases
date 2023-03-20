@@ -13,6 +13,20 @@
         -   案件 ID
         -   年份
 
+## 安裝 Mysql
+
+-   安裝指令
+
+```
+https://dev.mysql.com/get/mysql-apt-config_0.8.22-1_all.deb
+sudo dpkg -i mysql-apt-config_0.8.22-1_all.deb
+sudo apt update
+sudo apt-cache policy mysql-server
+sudo apt install mysql-client mysql-server
+```
+
+-   設定密碼
+
 ## 資料庫
 
 -   mysql
