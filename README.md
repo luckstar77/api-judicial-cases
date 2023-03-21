@@ -46,6 +46,7 @@ sudo apt install mysql-client mysql-server
 
 -   sudo service mysql start
 -   npm i -g pm2 typescript
+-   cd rental-housing/api-judicial-cases
 -   tsc
 -   pm2 start build/index.js
 
@@ -76,11 +77,39 @@ server {
 -   [certbot](https://www.digitalocean.com/community/tutorials/how-to-secure-nginx-with-let-s-encrypt-on-ubuntu-20-04)
 -   [nginx](https://andy6804tw.github.io/2022/02/27/nginx-tutorial/)
 
-## EC2 主機重啟後初始指令
+## 主機環境架設
+
+-   在 AWS Route 53 新增 A 紀錄指到主機 IP
+-   在 nginx 的設定檔新增 domain 的 nginx 設定檔
+
+`/etc/nginx/sites-enabled/api.rental.imallenlai.com`
 
 ```
-sudo systemctl start redis-server
-sudo systemctl start mongod
-cd stock-dividend-yield/api-stock-dividend-yield
-pm2 start build/index.js
+server {
+        server_name  api.rental.imallenlai.com;
+
+
+        location / {
+            proxy_pass http://127.0.0.1:3010;
+        }
+
+}
+```
+
+-   利用 certbot 建立 SSL 憑證，並且選擇 http 自動轉址
+
+```
+sudo certbot --nginx -d example.com
+```
+
+-   確認 nginx 設定檔是否正確
+
+```
+sudo nginx -t
+```
+
+-   確認 nginx 設定檔是否正確
+
+```
+sudo nginx -s reload
 ```
