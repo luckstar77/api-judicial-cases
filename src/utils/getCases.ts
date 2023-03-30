@@ -11,6 +11,15 @@ export default async (search: string) => {
     const result = await knexClient('judicialFileset')
         .whereILike('plaintiff', search)
         .orWhereILike('defendant', search)
-        .select('id', 'plaintiff', 'defendant', 'rent', 'city', 'win', 'jyear');
+        .select(
+            'id',
+            'plaintiff',
+            'defendant',
+            'rent',
+            'city',
+            'win',
+            'jyear',
+            'jfull'
+        );
     return result;
 };
