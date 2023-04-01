@@ -19,7 +19,8 @@ export default async (search: string) => {
             'city',
             'win',
             'jyear',
-            'jfull'
+            'jfull',
+            'jtitle'
         );
     return result;
 };
