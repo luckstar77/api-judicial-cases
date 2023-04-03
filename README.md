@@ -113,3 +113,9 @@ sudo nginx -t
 ```
 sudo nginx -s reload
 ```
+
+## 部署
+- 本地上傳到遠端
+```
+scp -i ./pem -r build/* ec2@remote:/build
+```
