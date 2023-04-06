@@ -4,6 +4,7 @@ import cors from 'cors';
 import { Knex } from 'knex';
 import * as knex from './db/knex';
 import getCases from './utils/getCases';
+import getName from './utils/getName';
 
 const config: Knex.Config = {
     client: 'mysql2',
@@ -39,6 +40,22 @@ const config: Knex.Config = {
         const { search } = req.query as { search: string };
         const cases = await getCases(search);
         res.send(cases);
+    });
+
+    app.get('/name', async function (req, res) {
+        const { city, rentMin, rentMax, score } = req.query as {
+            city: string;
+            rentMin: string;
+            rentMax: string;
+            score: string;
+        };
+        const name = await getName({
+            city,
+            rentMin: parseInt(rentMin),
+            rentMax: parseInt(rentMax),
+            score: parseInt(score),
+        });
+        res.send(name);
     });
 
     app.listen(3010);
