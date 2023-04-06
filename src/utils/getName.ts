@@ -24,7 +24,7 @@ export default async (query: {
         .whereBetween('rent', [rentMin, rentMax])
         .where({ city });
 
-    const result = knexClient
+    const result = await knexClient
         .select('name', knexClient.raw('COUNT(*) as count'))
         .from(subquery.as('subquery'))
         .groupBy('name')
