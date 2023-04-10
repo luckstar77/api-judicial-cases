@@ -27,6 +27,8 @@ export default async (query: {
     const result = await knexClient
         .select('name', knexClient.raw('COUNT(*) as count'))
         .from(subquery.as('subquery'))
+        .whereNot('name', 'like', '%○%') // Add this line
+        .whereRaw('LENGTH(name) <= 12')
         .groupBy('name')
         .havingRaw('COUNT(*) > ?', score)
         .orderBy('count', 'desc'); // Add this line
