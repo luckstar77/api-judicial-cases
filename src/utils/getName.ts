@@ -28,7 +28,8 @@ export default async (query: {
         .select('name', knexClient.raw('COUNT(*) as count'))
         .from(subquery.as('subquery'))
         .groupBy('name')
-        .havingRaw('COUNT(*) > ?', score);
+        .havingRaw('COUNT(*) > ?', score)
+        .orderBy('count', 'desc'); // Add this line
 
     return result;
 };
