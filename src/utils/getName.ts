@@ -30,7 +30,7 @@ export default async (query: {
         .whereNot('name', 'like', '%○%') // Add this line
         .whereRaw('LENGTH(name) <= 12')
         .groupBy('name')
-        .havingRaw('COUNT(*) > ?', score)
+        .havingRaw('COUNT(*) >= ?', score)
         .orderBy('count', 'desc'); // Add this line
 
     return result;
