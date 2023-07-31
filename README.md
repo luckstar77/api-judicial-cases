@@ -121,3 +121,14 @@ sudo nginx -s reload
 ```
 scp -i ./pem -r build/* ec2@remote:/build
 ```
+
+## 建立.env.local
+
+FIREBASE_API_KEY=
+FIREBASE_AUTH_DOMAIN=
+FIREBASE_PROJECT_ID=
+FIREBASE_STORAGE_BUCKET=
+FIREBASE_MESSAGING_SENDER_ID=
+FIREBASE_APP_ID=
+MEASUREMENT_ID=
+SESSION_SECRET=
