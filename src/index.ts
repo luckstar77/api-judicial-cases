@@ -1,17 +1,14 @@
-import dotenv from 'dotenv';
-dotenv.config();
-
+import './env';
 import express, { Request, Response } from 'express';
 import cors from 'cors';
-import session from 'express-session';
-import KnexSessionStoreFactory from 'connect-session-knex';
+import jwt from 'jsonwebtoken';
 
 import { Knex } from 'knex';
 import * as knex from './db/knex';
 import getCases from './utils/getCases';
 import getName from './utils/getName';
 import firebaseApp from './lib/firebase';
-import checkLoggedIn from './middleware/checkLoggedIn';
+import checkLoggedIn, { RequestWithUser } from './middleware/checkLoggedIn';
 
 const config: Knex.Config = {
     client: 'mysql2',
@@ -38,8 +35,6 @@ const config: Knex.Config = {
     },
 };
 
-const KnexSessionStore = KnexSessionStoreFactory(session);
-
 declare module 'express-session' {
     export interface SessionData {
         user: { [key: string]: any }; // 用你的使用者類型來替換 `{ [key: string]: any }`
@@ -56,20 +51,6 @@ declare module 'express-session' {
 
     // Parse URL-encoded bodies for this app. Equivalent to bodyParser.urlencoded({ extended: true })
     app.use(express.urlencoded({ extended: true }));
-    // Session Middleware Configuration
-    app.use(
-        session({
-            secret: process.env.SESSION_SECRET!,
-            cookie: {
-                maxAge: 7 * 24 * 60 * 60 * 1000,
-            },
-            store: new KnexSessionStore({
-                knex: knexClient,
-            }),
-            resave: false,
-            saveUninitialized: false,
-        })
-    );
 
     app.get('/cases', async function (req, res) {
         const { search } = req.query as { search: string };
@@ -117,17 +98,20 @@ declare module 'express-session' {
                     [uid, ip, phone]
                 );
 
-                // Save the phone number to session
-                req.session.user = {
+                const userPayload = {
                     uid,
                     phone,
                     ip,
                 };
+                const token = jwt.sign(userPayload, process.env.JWT_SECRET!, {
+                    expiresIn: '1y', // 設定過期時間
+                });
 
                 res.status(200).send({
                     uid,
                     phone,
                     ip,
+                    token,
                 });
             } else {
                 res.status(401).send({ message: 'Invalid token.' });
@@ -139,9 +123,9 @@ declare module 'express-session' {
         }
     });
 
-    app.get('/user', checkLoggedIn, (req, res) => {
+    app.get('/user', checkLoggedIn, (req: RequestWithUser, res) => {
         // At this point, we know the user is logged in
-        res.send(req.session.user);
+        res.send(req.user);
     });
 
     app.listen(3010);
