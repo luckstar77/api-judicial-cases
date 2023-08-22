@@ -48,7 +48,7 @@ sudo apt install mysql-client mysql-server
 -   npm i -g pm2 typescript
 -   cd rental-housing/api-judicial-cases
 -   tsc
--   pm2 start build/index.js
+-   pm2 start rental-housing/api-judicial-cases/ecosystem.config.js
 
 ---
 
