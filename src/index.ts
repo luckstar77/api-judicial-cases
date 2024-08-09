@@ -9,6 +9,7 @@ import getCases from './utils/getCases';
 import getName from './utils/getName';
 import firebaseApp from './lib/firebase';
 import checkLoggedIn, { RequestWithUser } from './middleware/checkLoggedIn';
+import updateUser from './utils/updateUser';
 
 const config: Knex.Config = {
     client: 'mysql2',
@@ -125,7 +126,21 @@ declare module 'express-session' {
 
     app.get('/user', checkLoggedIn, (req: RequestWithUser, res) => {
         // At this point, we know the user is logged in
+
         res.send(req.user);
+    });
+
+    app.post('/user', checkLoggedIn, async (req:RequestWithUser, res) => {
+        await updateUser(req.user?.uid, {
+            ...req.body,
+        });
+        req.user = {...req.user, ...req.body};
+        const {name, phone, email, uid, ip } = req.user!;
+        const userPayload = {name, phone, email, uid, ip};
+        const token = jwt.sign(userPayload, process.env.JWT_SECRET!, {
+            expiresIn: '1y', // 設定過期時間
+        });
+        res.send({...userPayload, token});
     });
 
     app.listen(3010);
