@@ -98,11 +98,18 @@ declare module 'express-session' {
             `,
                     [uid, ip, phone]
                 );
+                const {name, email} = await knexClient('users')
+                    .select('name', 'email')
+                    .where({ uid })
+                    .first();
+            
 
                 const userPayload = {
                     uid,
                     phone,
                     ip,
+                    name, 
+                    email
                 };
                 const token = jwt.sign(userPayload, process.env.JWT_SECRET!, {
                     expiresIn: '1y', // 設定過期時間
@@ -112,6 +119,8 @@ declare module 'express-session' {
                     uid,
                     phone,
                     ip,
+                    name, 
+                    email,
                     token,
                 });
             } else {
