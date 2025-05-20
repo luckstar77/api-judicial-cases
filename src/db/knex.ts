@@ -9,3 +9,5 @@ export async function init(config: Knex.Config) {
 export async function getClient() {
     return client;
 }
+
+export default knex;

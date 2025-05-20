@@ -8,8 +8,7 @@ import * as knex from './db/knex';
 import getCases from './utils/getCases';
 import getName from './utils/getName';
 import firebaseApp from './lib/firebase';
-import checkLoggedIn, { RequestWithUser } from './middleware/checkLoggedIn';
-import updateUser from './utils/updateUser';
+import router from './routes/userRoutes';
 
 const config: Knex.Config = {
     client: 'mysql2',
@@ -52,6 +51,8 @@ declare module 'express-session' {
 
     // Parse URL-encoded bodies for this app. Equivalent to bodyParser.urlencoded({ extended: true })
     app.use(express.urlencoded({ extended: true }));
+
+    app.use(require('./middleware/errorHandler').default);
 
     app.get('/cases', async function (req, res) {
         const { search } = req.query as { search: string };
@@ -132,25 +133,25 @@ declare module 'express-session' {
             res.status(401).send({ message: 'Token verification failed.' });
         }
     });
+    
+    app.use(router)
+    //     // At this point, we know the user is logged in
 
-    app.get('/user', checkLoggedIn, (req: RequestWithUser, res) => {
-        // At this point, we know the user is logged in
+    //     res.send(req.user);
+    // });
 
-        res.send(req.user);
-    });
-
-    app.post('/user', checkLoggedIn, async (req:RequestWithUser, res) => {
-        await updateUser(req.user?.uid, {
-            ...req.body,
-        });
-        req.user = {...req.user, ...req.body};
-        const {name, phone, email, uid, ip } = req.user!;
-        const userPayload = {name, phone, email, uid, ip};
-        const token = jwt.sign(userPayload, process.env.JWT_SECRET!, {
-            expiresIn: '1y', // 設定過期時間
-        });
-        res.send({...userPayload, token});
-    });
+    // app.post('/user', checkLoggedIn, async (req:RequestWithUser, res) => {
+    //     await updateUser(req.user?.uid, {
+    //         ...req.body,
+    //     });
+    //     req.user = {...req.user, ...req.body};
+    //     const {name, phone, email, uid, ip } = req.user!;
+    //     const userPayload = {name, phone, email, uid, ip};
+    //     const token = jwt.sign(userPayload, process.env.JWT_SECRET!, {
+    //         expiresIn: '1y', // 設定過期時間
+    //     });
+    //     res.send({...userPayload, token});
+    // });
 
     app.listen(3010);
 })();
