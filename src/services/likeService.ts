@@ -20,3 +20,10 @@ export const getLikeCount = async (filesetId: string): Promise<number> => {
     const countValue = result?.count ?? 0;
     return Number(countValue);
 };
+
+export const getLikeStatus = async (userId: string, filesetId: string) => {
+    const record = await db('likes')
+        .where({ userId, filesetId })
+        .first();
+    return Boolean(record);
+};
