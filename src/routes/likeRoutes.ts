@@ -5,6 +5,6 @@ import checkLoggedIn from '../middleware/checkLoggedIn';
 const router = Router();
 
 router.post('/:filesetId', checkLoggedIn, handleToggleLike);
-router.get('/:filesetId', checkLoggedIn, handleGetLikeCount);
+router.get('/:filesetId', handleGetLikeCount);
 
 export default router;
