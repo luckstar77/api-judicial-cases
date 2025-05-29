@@ -3,37 +3,12 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import jwt from 'jsonwebtoken';
 
-import { Knex } from 'knex';
-import * as knex from './db/knex';
 import getCases from './utils/getCases';
 import getName from './utils/getName';
 import firebaseApp from './lib/firebase';
-import router from './routes/userRoutes';
-
-const config: Knex.Config = {
-    client: 'mysql2',
-    connection: {
-        host: '127.0.0.1',
-        port: 3306,
-        user: 'root',
-        password: '',
-        database: 'rental',
-    },
-    log: {
-        warn(message) {
-            console.log(message);
-        },
-        error(message) {
-            console.log(message);
-        },
-        deprecate(message) {
-            console.log(message);
-        },
-        debug(message) {
-            console.log(message);
-        },
-    },
-};
+import router from './routes';
+import { healthCheck, db } from './db';
+import errorHandler from './middleware/errorHandler';
 
 declare module 'express-session' {
     export interface SessionData {
@@ -41,8 +16,14 @@ declare module 'express-session' {
     }
 }
 (async () => {
-    await knex.init(config);
-    const knexClient = await knex.getClient();
+    try {
+        await healthCheck();            // 驅動、連線 OK ?
+        // buildExpressApp() ...
+    } catch (err) {
+        console.error('DB 連線失敗：', err);
+        process.exit(1);
+    }
+
     const app = express();
 
     app.use(cors({ credentials: true }));
@@ -51,8 +32,6 @@ declare module 'express-session' {
 
     // Parse URL-encoded bodies for this app. Equivalent to bodyParser.urlencoded({ extended: true })
     app.use(express.urlencoded({ extended: true }));
-
-    app.use(require('./middleware/errorHandler').default);
 
     app.get('/cases', async function (req, res) {
         const { search } = req.query as { search: string };
@@ -89,7 +68,7 @@ declare module 'express-session' {
             if (uid) {
                 // 使用您的 knex 實例來存儲 phone
                 // 假設您已經有一個名為 "users" 的表格，並且有一個名為 "phone" 的列
-                await knexClient.raw(
+                await db.raw(
                     `
                 INSERT INTO users (uid, ip, phone)
                 VALUES (?, ?, ?)
@@ -99,7 +78,7 @@ declare module 'express-session' {
             `,
                     [uid, ip, phone]
                 );
-                const {name, email} = await knexClient('users')
+                const {name, email} = await db('users')
                     .select('name', 'email')
                     .where({ uid })
                     .first();
@@ -134,24 +113,12 @@ declare module 'express-session' {
         }
     });
     
-    app.use(router)
-    //     // At this point, we know the user is logged in
+    app.use(router);
 
-    //     res.send(req.user);
-    // });
+    // 健康檢查路由
+    app.get('/health', (req, res) => res.status(200).json({ status: 'OK' }));
 
-    // app.post('/user', checkLoggedIn, async (req:RequestWithUser, res) => {
-    //     await updateUser(req.user?.uid, {
-    //         ...req.body,
-    //     });
-    //     req.user = {...req.user, ...req.body};
-    //     const {name, phone, email, uid, ip } = req.user!;
-    //     const userPayload = {name, phone, email, uid, ip};
-    //     const token = jwt.sign(userPayload, process.env.JWT_SECRET!, {
-    //         expiresIn: '1y', // 設定過期時間
-    //     });
-    //     res.send({...userPayload, token});
-    // });
+    app.use(errorHandler);
 
     app.listen(3010);
 })();

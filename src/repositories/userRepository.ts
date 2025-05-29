@@ -1,11 +1,12 @@
-import knex from '../db/knex';
+import {db} from '../db';
 
 export default {
     findById(id: string) {
-        return knex('users').where('id', id).first();
+        
+        return db('users').where('id', id).first();
     },
 
     create(data: any) {
-        return knex('users').insert(data).returning('*');
+        return db('users').insert(data).returning('*');
     }
 };

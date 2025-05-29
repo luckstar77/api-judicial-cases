@@ -1,4 +1,4 @@
-import * as knex from '../db/knex';
+import {db} from '../db';
 
 interface Map {
     [key: string]: any;
@@ -6,9 +6,8 @@ interface Map {
 }
 
 export default async (search: string) => {
-    const knexClient = await knex.getClient();
 
-    const result = await knexClient('judicialFileset')
+    const result = await db('judicialFileset')
         .whereILike('plaintiff', search)
         .orWhereILike('defendant', search)
         .select(
