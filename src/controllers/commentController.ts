@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import commentService from '../services/commentService';
-import { RequestWithUser } from '../middleware/checkLoggedIn';
+import { RequestWithUser } from '../middlewares/checkLoggedIn';
 
 export default {
     async addComment(req: RequestWithUser, res: Response) {

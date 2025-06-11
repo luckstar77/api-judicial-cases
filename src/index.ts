@@ -8,7 +8,7 @@ import getName from './utils/getName';
 import firebaseApp from './lib/firebase';
 import router from './routes';
 import { healthCheck, db } from './db';
-import errorHandler from './middleware/errorHandler';
+import errorHandler from './middlewares/errorHandler';
 
 declare module 'express-session' {
     export interface SessionData {

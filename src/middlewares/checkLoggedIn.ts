@@ -32,6 +32,7 @@ export default function checkLoggedIn(
             req.user = user as UserPayload;
         } else {
             // 處理錯誤情況
+            return res.sendStatus(403);
         }
 
         next(); // 繼續處理請求

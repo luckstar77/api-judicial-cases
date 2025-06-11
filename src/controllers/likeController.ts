@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { toggleLike, getLikeCount, getLikeStatus } from '../services/likeService';
-import { RequestWithUser } from '../middleware/checkLoggedIn';
+import { RequestWithUser } from '../middlewares/checkLoggedIn';
 
 export const handleToggleLike = async (req: RequestWithUser, res: Response) => {
     const userId = req.user?.uid;

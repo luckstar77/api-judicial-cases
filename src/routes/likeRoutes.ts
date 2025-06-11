@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { handleToggleLike, handleGetLikeCount, handleGetLikeStatus } from '../controllers/likeController';
-import checkLoggedIn from '../middleware/checkLoggedIn';
+import checkLoggedIn from '../middlewares/checkLoggedIn';
 
 const router = Router();
 

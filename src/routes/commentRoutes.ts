@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import commentController from '../controllers/commentController';
-import checkLoggedIn from '../middleware/checkLoggedIn';
+import checkLoggedIn from '../middlewares/checkLoggedIn';
 
 const router = Router();
 

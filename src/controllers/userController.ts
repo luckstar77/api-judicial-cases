@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { RequestWithUser } from '../middleware/checkLoggedIn';
+import { RequestWithUser } from '../middlewares/checkLoggedIn';
 import updateUser from '../utils/updateUser';
 import {signJwt} from '../utils/jwt';
 
