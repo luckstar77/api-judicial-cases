@@ -1,4 +1,5 @@
 import { db } from '../db'; // 既有的 Knex 實例 (import knex({ ... }))
+import { safeJsonParse } from '../utils/safeJsonParse';
 
 /*********************************
  * 型別定義
@@ -70,7 +71,7 @@ export const getCaseDetail = async (id: number) => {
 
     return {
         ...caseRow,
-        imageUrls: JSON.parse(caseRow.imageUrls),
+        imageUrls: safeJsonParse<string[]>(caseRow.imageUrls, []),
         comments,
         likeCount: Number(likeCount || 0),
     };
