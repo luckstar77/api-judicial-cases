@@ -11,7 +11,7 @@ export const createCase = async (req: RequestWithUser, res: Response) => {
         )?.map((f) => `https://${f.bucket}.s3.amazonaws.com/${f.key}`) ?? [];
 
         const id = await caseService.createCase({
-            plaintiffId: req.user!.userId,
+            plaintiffId: req.user!.uid,
             defendantName,
             defendantPhone,
             defendantIdNo,
@@ -58,7 +58,7 @@ export const addComment = async (req: RequestWithUser, res: Response) => {
     try {
         await caseService.addComment(
             Number(req.params.id),
-      req.user!.userId,
+      req.user!.uid,
       req.body.content
         );
         return res.status(201).end();
@@ -73,7 +73,7 @@ export const toggleLike = async (req: RequestWithUser, res: Response) => {
     try {
         const liked = await caseService.toggleLike(
             Number(req.params.id),
-      req.user!.userId
+      req.user!.uid
         );
         return res.json({ liked });
     } catch (err) {
