@@ -21,6 +21,10 @@ export interface CaseRow {
   imageUrls: string; // 資料庫內存 JSON 字串
   createdAt: Date;
   updatedAt: Date;
+  name?: string;
+  email?: string;
+  phone?: string;
+  ip?: string;
 }
 
 export interface CaseCommentRow {
@@ -49,14 +53,19 @@ export const createCase = async (data: CreateCaseInput): Promise<number> => {
 
 /** 取案例列表（依建立時間倒序） */
 export const listCases = async (): Promise<CaseRow[]> => {
-    return db<CaseRow>('cases')
-        .select('*')
-        .orderBy('createdAt', 'desc');
+    return db<CaseRow>('cases as c')
+        .join('users as u', 'c.plaintiffId', 'u.uid')
+        .select('c.*', 'u.name', 'u.email', 'u.phone', 'u.ip')
+        .orderBy('c.createdAt', 'desc');
 };
 
 /** 取單一案例詳情，包含留言與按讚數 */
 export const getCaseDetail = async (id: number) => {
-    const caseRow = await db<CaseRow>('cases').where({ id }).first();
+    const caseRow = await db<CaseRow>('cases as c')
+        .join('users as u', 'c.plaintiffId', 'u.uid')
+        .select('c.*', 'u.name', 'u.email', 'u.phone', 'u.ip')
+        .where('c.id', id)
+        .first();
     if (!caseRow) return null;
 
     // 留言
@@ -71,7 +80,6 @@ export const getCaseDetail = async (id: number) => {
 
     return {
         ...caseRow,
-        imageUrls: safeJsonParse<string[]>(caseRow.imageUrls, []),
         comments,
         likeCount: Number(likeCount || 0),
     };

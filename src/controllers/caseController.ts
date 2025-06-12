@@ -30,11 +30,7 @@ export const createCase = async (req: RequestWithUser, res: Response) => {
 export const listCases = async (_req: Request, res: Response) => {
     try {
         const rows = await caseService.listCases();
-        const data = rows.map((r) => ({
-            ...r,
-            imageUrls: safeJsonParse<string[]>(r.imageUrls, []),
-        }));
-        return res.json(data);
+        return res.json(rows);
     } catch (err) {
         console.error('listCases error:', err);
         return res.status(500).json({ message: 'listCases failed' });
