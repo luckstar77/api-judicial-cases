@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { RequestWithUser } from '../middlewares/checkLoggedIn';
 import * as caseService from '../services/caseService';
+import { safeJsonParse } from '../utils/safeJsonParse';
 
 /** 建立新案例 */
 export const createCase = async (req: RequestWithUser, res: Response) => {
@@ -31,7 +32,7 @@ export const listCases = async (_req: Request, res: Response) => {
         const rows = await caseService.listCases();
         const data = rows.map((r) => ({
             ...r,
-            imageUrls: JSON.parse(r.imageUrls),
+            imageUrls: safeJsonParse<string[]>(r.imageUrls, []),
         }));
         return res.json(data);
     } catch (err) {
