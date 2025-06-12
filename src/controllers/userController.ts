@@ -10,7 +10,7 @@ export default {
 
     async createUser(req: RequestWithUser, res: Response) {
         
-        await updateUser(req.user?.uid, {
+        await updateUser(req.user!.uid, {
             ...req.body,
         });
         req.user = {...req.user, ...req.body};

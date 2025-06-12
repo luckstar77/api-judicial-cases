@@ -4,7 +4,7 @@ import { RequestWithUser } from '../middlewares/checkLoggedIn';
 
 export default {
     async addComment(req: RequestWithUser, res: Response) {
-        const userId = req.user?.uid;
+        const userId = req.user!.uid;
         const { filesetId, content } = req.body;
         const comment = await commentService.createComment(userId, filesetId, content);
         res.status(201).json(comment);

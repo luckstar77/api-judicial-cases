@@ -3,7 +3,7 @@ import { toggleLike, getLikeCount, getLikeStatus } from '../services/likeService
 import { RequestWithUser } from '../middlewares/checkLoggedIn';
 
 export const handleToggleLike = async (req: RequestWithUser, res: Response) => {
-    const userId = req.user?.uid;
+    const userId = req.user!.uid;
     const { filesetId } = req.params;
     try {
         const liked = await toggleLike(userId, filesetId);
@@ -24,7 +24,7 @@ export const handleGetLikeCount = async (req: Request, res: Response) => {
 };
 
 export const handleGetLikeStatus = async (req: RequestWithUser, res: Response) => {
-    const userId = req.user?.uid;
+    const userId = req.user!.uid;
     const filesetId = req.params.filesetId;
     const liked = await getLikeStatus(userId, filesetId);
     res.json({ liked });
