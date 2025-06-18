@@ -58,18 +58,53 @@ export const createCase = async (data: CreateCaseInput): Promise<number> => {
 };
 
 /** 取案例列表（依建立時間倒序） */
-export const listCases = async (): Promise<CaseRow[]> => {
-    return db<CaseRow>('cases as c')
+export const listCases = async (): Promise<(CaseRow & { imageUrls: string[] })[]> => {
+    const rows = await db<CaseRow>('cases as c')
         .join('users as u', 'c.plaintiffId', 'u.uid')
-        .select('c.*', 'u.name', 'u.email', 'u.phone', 'u.ip')
+        .select(
+            'c.id',
+            'c.plaintiffId',
+            'c.title',
+            'c.content',
+            'c.defendantName',
+            'c.defendantPhone',
+            'c.defendantIdNo',
+            'c.imageUrls',
+            'c.createdAt',
+            'c.updatedAt',
+            'u.name',
+            'u.email',
+            'u.phone',
+            'u.ip'
+        )
         .orderBy('c.createdAt', 'desc');
+
+    return rows.map((r) => ({
+        ...r,
+        imageUrls: safeJsonParse<string[]>(r.imageUrls, []),
+    }));
 };
 
 /** 取單一案例詳情，包含留言與按讚數 */
 export const getCaseDetail = async (id: number) => {
     const caseRow = await db<CaseRow>('cases as c')
         .join('users as u', 'c.plaintiffId', 'u.uid')
-        .select('c.*', 'u.name', 'u.email', 'u.phone', 'u.ip')
+        .select(
+            'c.id',
+            'c.plaintiffId',
+            'c.title',
+            'c.content',
+            'c.defendantName',
+            'c.defendantPhone',
+            'c.defendantIdNo',
+            'c.imageUrls',
+            'c.createdAt',
+            'c.updatedAt',
+            'u.name',
+            'u.email',
+            'u.phone',
+            'u.ip'
+        )
         .where('c.id', id)
         .first();
     if (!caseRow) return null;
@@ -86,6 +121,7 @@ export const getCaseDetail = async (id: number) => {
 
     return {
         ...caseRow,
+        imageUrls: safeJsonParse<string[]>(caseRow.imageUrls, []),
         comments,
         likeCount: Number(likeCount || 0),
     };
