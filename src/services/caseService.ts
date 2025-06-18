@@ -6,6 +6,8 @@ import { safeJsonParse } from '../utils/safeJsonParse';
  *********************************/
 export interface CreateCaseInput {
   plaintiffId: string;
+  title: string;
+  content: string;
   defendantName: string;
   defendantPhone: string;
   defendantIdNo: string;
@@ -15,6 +17,8 @@ export interface CreateCaseInput {
 export interface CaseRow {
   id: number;
   plaintiffId: string;
+  title: string;
+  content: string;
   defendantName: string;
   defendantPhone: string;
   defendantIdNo: string;
@@ -43,6 +47,8 @@ export interface CaseCommentRow {
 export const createCase = async (data: CreateCaseInput): Promise<number> => {
     const [id] = await db<CaseRow>('cases').insert({
         plaintiffId: data.plaintiffId,
+        title: data.title,
+        content: data.content,
         defendantName: data.defendantName,
         defendantPhone: data.defendantPhone,
         defendantIdNo: data.defendantIdNo,
