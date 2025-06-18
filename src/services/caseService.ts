@@ -1,5 +1,4 @@
 import { db } from '../db'; // 既有的 Knex 實例 (import knex({ ... }))
-import { safeJsonParse } from '../utils/safeJsonParse';
 
 /*********************************
  * 型別定義
@@ -58,7 +57,7 @@ export const createCase = async (data: CreateCaseInput): Promise<number> => {
 };
 
 /** 取案例列表（依建立時間倒序） */
-export const listCases = async (): Promise<(CaseRow & { imageUrls: string[] })[]> => {
+export const listCases = async (): Promise<CaseRow[]> => {
     const rows = await db<CaseRow>('cases as c')
         .join('users as u', 'c.plaintiffId', 'u.uid')
         .select(
@@ -79,10 +78,7 @@ export const listCases = async (): Promise<(CaseRow & { imageUrls: string[] })[]
         )
         .orderBy('c.createdAt', 'desc');
 
-    return rows.map((r) => ({
-        ...r,
-        imageUrls: safeJsonParse<string[]>(r.imageUrls, []),
-    }));
+    return rows;
 };
 
 /** 取單一案例詳情，包含留言與按讚數 */
