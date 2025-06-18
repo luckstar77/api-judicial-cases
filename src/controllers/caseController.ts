@@ -6,13 +6,15 @@ import { safeJsonParse } from '../utils/safeJsonParse';
 /** 建立新案例 */
 export const createCase = async (req: RequestWithUser, res: Response) => {
     try {
-        const { defendantName, defendantPhone, defendantIdNo } = req.body;
+        const { title, content, defendantName, defendantPhone, defendantIdNo } = req.body;
         const imageUrls = (
       req.files as Express.MulterS3.File[] | undefined
         )?.map((f) => `https://${f.bucket}.s3.amazonaws.com/${f.key}`) ?? [];
 
         const id = await caseService.createCase({
             plaintiffId: req.user!.uid,
+            title,
+            content,
             defendantName,
             defendantPhone,
             defendantIdNo,

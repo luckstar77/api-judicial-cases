@@ -41,6 +41,27 @@ sudo apt install mysql-client mysql-server
                 -   defendant
             -   rent `int`
             -   jyear `string`
+        -   cases
+            -   id `auto`
+            -   plaintiffId `string`
+            -   title `string`
+            -   content `text`
+            -   defendantName `string`
+            -   defendantPhone `string`
+            -   defendantIdNo `string`
+            -   imageUrls `text`
+            -   createdAt `timestamp`
+            -   updatedAt `timestamp`
+
+### 新增欄位
+
+若 `cases` 表尚無 `title` 與 `content` 欄位，可執行下列 SQL 新增：
+
+```sql
+ALTER TABLE cases
+    ADD COLUMN title VARCHAR(255) NOT NULL AFTER plaintiffId,
+    ADD COLUMN content TEXT AFTER title;
+```
 
 ## 開發流程
 
