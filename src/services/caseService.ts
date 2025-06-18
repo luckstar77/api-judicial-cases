@@ -121,7 +121,6 @@ export const getCaseDetail = async (id: number) => {
 
     return {
         ...caseRow,
-        imageUrls: safeJsonParse<string[]>(caseRow.imageUrls, []),
         comments,
         likeCount: Number(likeCount || 0),
     };
