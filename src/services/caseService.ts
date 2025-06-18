@@ -1,5 +1,4 @@
 import { db } from '../db'; // 既有的 Knex 實例 (import knex({ ... }))
-import { safeJsonParse } from '../utils/safeJsonParse';
 
 /*********************************
  * 型別定義
@@ -59,17 +58,49 @@ export const createCase = async (data: CreateCaseInput): Promise<number> => {
 
 /** 取案例列表（依建立時間倒序） */
 export const listCases = async (): Promise<CaseRow[]> => {
-    return db<CaseRow>('cases as c')
+    const rows = await db<CaseRow>('cases as c')
         .join('users as u', 'c.plaintiffId', 'u.uid')
-        .select('c.*', 'u.name', 'u.email', 'u.phone', 'u.ip')
+        .select(
+            'c.id',
+            'c.plaintiffId',
+            'c.title',
+            'c.content',
+            'c.defendantName',
+            'c.defendantPhone',
+            'c.defendantIdNo',
+            'c.imageUrls',
+            'c.createdAt',
+            'c.updatedAt',
+            'u.name',
+            'u.email',
+            'u.phone',
+            'u.ip'
+        )
         .orderBy('c.createdAt', 'desc');
+
+    return rows;
 };
 
 /** 取單一案例詳情，包含留言與按讚數 */
 export const getCaseDetail = async (id: number) => {
     const caseRow = await db<CaseRow>('cases as c')
         .join('users as u', 'c.plaintiffId', 'u.uid')
-        .select('c.*', 'u.name', 'u.email', 'u.phone', 'u.ip')
+        .select(
+            'c.id',
+            'c.plaintiffId',
+            'c.title',
+            'c.content',
+            'c.defendantName',
+            'c.defendantPhone',
+            'c.defendantIdNo',
+            'c.imageUrls',
+            'c.createdAt',
+            'c.updatedAt',
+            'u.name',
+            'u.email',
+            'u.phone',
+            'u.ip'
+        )
         .where('c.id', id)
         .first();
     if (!caseRow) return null;
