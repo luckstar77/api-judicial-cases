@@ -7,6 +7,8 @@ export interface CreateCaseInput {
   plaintiffId: string;
   title: string;
   content: string;
+  location: string;
+  district: string;
   defendantName: string;
   defendantPhone: string;
   defendantIdNo: string;
@@ -18,6 +20,8 @@ export interface CaseRow {
   plaintiffId: string;
   title: string;
   content: string;
+  location: string;
+  district: string;
   defendantName: string;
   defendantPhone: string;
   defendantIdNo: string;
@@ -48,6 +52,8 @@ export const createCase = async (data: CreateCaseInput): Promise<number> => {
         plaintiffId: data.plaintiffId,
         title: data.title,
         content: data.content,
+        location: data.location,
+        district: data.district,
         defendantName: data.defendantName,
         defendantPhone: data.defendantPhone,
         defendantIdNo: data.defendantIdNo,
@@ -65,6 +71,8 @@ export const listCases = async (): Promise<CaseRow[]> => {
             'c.plaintiffId',
             'c.title',
             'c.content',
+            'c.location',
+            'c.district',
             'c.defendantName',
             'c.defendantPhone',
             'c.defendantIdNo',
@@ -90,6 +98,8 @@ export const getCaseDetail = async (id: number) => {
             'c.plaintiffId',
             'c.title',
             'c.content',
+            'c.location',
+            'c.district',
             'c.defendantName',
             'c.defendantPhone',
             'c.defendantIdNo',

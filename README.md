@@ -46,12 +46,43 @@ sudo apt install mysql-client mysql-server
             -   plaintiffId `string`
             -   title `string`
             -   content `text`
+            -   location `string` (縣市)
+            -   district `string` (鄉鎮市區)
             -   defendantName `string`
             -   defendantPhone `string`
             -   defendantIdNo `string`
             -   imageUrls `text`
             -   createdAt `timestamp`
             -   updatedAt `timestamp`
+
+### 台灣縣市列表
+
+所有縣市及其鄉鎮市區請參考 `src/utils/taiwanDistricts.ts`
+
+```
+台北市
+新北市
+桃園市
+台中市
+台南市
+高雄市
+基隆市
+新竹市
+新竹縣
+苗栗縣
+彰化縣
+南投縣
+雲林縣
+嘉義市
+嘉義縣
+屏東縣
+宜蘭縣
+花蓮縣
+台東縣
+金門縣
+澎湖縣
+連江縣
+```
 
 ### 新增欄位
 
@@ -60,7 +91,9 @@ sudo apt install mysql-client mysql-server
 ```sql
 ALTER TABLE cases
     ADD COLUMN title VARCHAR(255) NOT NULL AFTER plaintiffId,
-    ADD COLUMN content TEXT AFTER title;
+    ADD COLUMN content TEXT AFTER title,
+    ADD COLUMN location VARCHAR(20) NOT NULL AFTER content,
+    ADD COLUMN district VARCHAR(20) NOT NULL AFTER location;
 ```
 
 ## 開發流程
