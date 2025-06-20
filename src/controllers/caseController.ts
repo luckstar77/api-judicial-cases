@@ -82,3 +82,20 @@ export const toggleLike = async (req: RequestWithUser, res: Response) => {
         return res.status(500).json({ message: 'toggleLike failed' });
     }
 };
+
+/** 取得是否已按讚 */
+export const getLikeStatus = async (
+    req: RequestWithUser,
+    res: Response
+) => {
+    try {
+        const liked = await caseService.getLikeStatus(
+            Number(req.params.id),
+            req.user!.uid
+        );
+        return res.json({ liked });
+    } catch (err) {
+        console.error('getLikeStatus error:', err);
+        return res.status(500).json({ message: 'getLikeStatus failed' });
+    }
+};
