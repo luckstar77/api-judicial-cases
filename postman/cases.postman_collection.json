@@ -1,0 +1,246 @@
+{
+    "info": {
+        "_postman_id": "9aeb75b1-680d-45ca-a25f-447a079e0f52",
+        "name": "案例",
+        "description": "上傳案例模組 API",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+        "_exporter_id": "4326003"
+    },
+    "item": [
+        {
+            "name": "建立案例",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{TOKEN}}"
+                    }
+                ],
+                "body": {
+                    "mode": "formdata",
+                    "formdata": [
+                        {
+                            "key": "defendantName",
+                            "value": "王小明",
+                            "type": "text"
+                        },
+                        {
+                            "key": "defendantPhone",
+                            "value": "0900123456",
+                            "type": "text"
+                        },
+                        {
+                            "key": "defendantIdNo",
+                            "value": "A123456789",
+                            "type": "text"
+                        },
+                        {
+                            "key": "title",
+                            "value": "案件標題",
+                            "type": "text"
+                        },
+                        {
+                            "key": "content",
+                            "value": "案件內容",
+                            "type": "text"
+                        },
+                        {
+                            "key": "images",
+                            "type": "file",
+                            "src": [
+                                "/Users/luckstar77/Downloads/S__26722314.jpg",
+                                "/Users/luckstar77/Downloads/S__26722313.jpg"
+                            ]
+                        }
+                    ]
+                },
+                "url": {
+                    "raw": "{{base_url}}/case",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "case"
+                    ]
+                }
+            },
+            "response": []
+        },
+        {
+            "name": "案例列表",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "{{base_url}}/case",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "case"
+                    ]
+                }
+            },
+            "response": []
+        },
+        {
+            "name": "案例詳情",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "{{base_url}}/case/{{caseId}}",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "case",
+                        "{{caseId}}"
+                    ]
+                }
+            },
+            "response": []
+        },
+        {
+            "name": "新增留言",
+            "request": {
+                "auth": {
+                    "type": "bearer",
+                    "bearer": [
+                        {
+                            "key": "token",
+                            "value": "",
+                            "type": "string"
+                        }
+                    ]
+                },
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{token}}"
+                    },
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"content\": \"此案例很有參考價值！\"\n}"
+                },
+                "url": {
+                    "raw": "{{base_url}}/case/{{caseId}}/comments",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "case",
+                        "{{caseId}}",
+                        "comments"
+                    ]
+                }
+            },
+            "response": []
+        },
+        {
+            "name": "按讚或取消讚",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{token}}"
+                    }
+                ],
+                "url": {
+                    "raw": "{{base_url}}/case/{{caseId}}/like",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "case",
+                        "{{caseId}}",
+                        "like"
+                    ]
+                }
+            },
+            "response": []
+        },
+        {
+            "name": "取得是否按讚",
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Authorization",
+                        "value": "Bearer {{token}}"
+                    }
+                ],
+                "url": {
+                    "raw": "{{base_url}}/case/{{caseId}}/like/status",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "case",
+                        "{{caseId}}",
+                        "like",
+                        "status"
+                    ]
+                }
+            },
+            "response": []
+        }
+    ],
+    "auth": {
+        "type": "bearer",
+        "bearer": [
+            {
+                "key": "token",
+                "value": "{{TOKEN}}",
+                "type": "string"
+            }
+        ]
+    },
+    "event": [
+        {
+            "listen": "prerequest",
+            "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                    ""
+                ]
+            }
+        },
+        {
+            "listen": "test",
+            "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                    ""
+                ]
+            }
+        }
+    ],
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "http://localhost:3010",
+            "type": "string"
+        },
+        {
+            "key": "token",
+            "value": "{{TOKEN}}",
+            "type": "string"
+        },
+        {
+            "key": "caseId",
+            "value": "1",
+            "type": "string"
+        }
+    ]
+}
