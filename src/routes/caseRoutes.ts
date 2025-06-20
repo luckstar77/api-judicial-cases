@@ -28,5 +28,6 @@ router.get('/', caseCtrl.listCases);
 router.get('/:id', caseCtrl.getCaseDetail);
 router.post('/:id/comments', checkLoggedIn, caseCtrl.addComment);
 router.post('/:id/like', checkLoggedIn, caseCtrl.toggleLike);
+router.get('/:id/like/status', checkLoggedIn, caseCtrl.getLikeStatus);
 
 export default router;

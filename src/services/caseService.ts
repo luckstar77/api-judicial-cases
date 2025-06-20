@@ -154,3 +154,12 @@ export const toggleLike = async (
     await db('caseLikes').insert({ caseId, userId });
     return true;
 };
+
+/** 取得是否已對案例按讚 */
+export const getLikeStatus = async (
+    caseId: number,
+    userId: string
+): Promise<boolean> => {
+    const liked = await db('caseLikes').where({ caseId, userId }).first();
+    return Boolean(liked);
+};
