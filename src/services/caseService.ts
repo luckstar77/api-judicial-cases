@@ -13,6 +13,7 @@ export interface CreateCaseInput {
   defendantPhone: string;
   defendantIdNo: string;
   imageUrls: string[]; // S3 連結陣列
+  ip: string;
 }
 
 export interface CaseRow {
@@ -60,6 +61,7 @@ export const createCase = async (data: CreateCaseInput): Promise<number> => {
         defendantPhone: data.defendantPhone,
         defendantIdNo: data.defendantIdNo,
         imageUrls: JSON.stringify(data.imageUrls),
+        ip: data.ip,
     });
     return Number(id);
 };
@@ -84,7 +86,7 @@ export const listCases = async (): Promise<CaseRow[]> => {
             'u.name',
             'u.email',
             'u.phone',
-            'u.ip'
+            'c.ip'
         )
         .orderBy('c.createdAt', 'desc');
 
@@ -111,7 +113,7 @@ export const getCaseDetail = async (id: number) => {
             'u.name',
             'u.email',
             'u.phone',
-            'u.ip'
+            'c.ip'
         )
         .where('c.id', id)
         .first();
