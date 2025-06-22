@@ -96,6 +96,16 @@ ALTER TABLE cases
     ADD COLUMN district VARCHAR(20) NOT NULL AFTER location;
 ```
 
+若 `comments` 與 `caseComments` 表尚無 `ip` 欄位，可執行下列 SQL 新增：
+
+```sql
+ALTER TABLE comments ADD COLUMN ip VARCHAR(45) AFTER content;
+ALTER TABLE caseComments ADD COLUMN ip VARCHAR(45) AFTER content;
+```
+
+應用程式會從 `X-Forwarded-For` HTTP 頭解析使用者真實 IP，若無此頭則退
+回連線位址。
+
 ## 開發流程
 
 -   sudo service mysql start

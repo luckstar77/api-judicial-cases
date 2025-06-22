@@ -120,7 +120,7 @@ export const getCaseDetail = async (id: number) => {
     // 留言
     const comments = await db<CaseCommentRow>('caseComments as cc')
         .join('users as u', 'cc.userId', 'u.uid')
-        .select('cc.*', 'u.name', 'u.ip')
+        .select('cc.*', 'u.name')
         .where('cc.caseId', id)
         .orderBy('cc.createdAt');
 
@@ -140,9 +140,10 @@ export const getCaseDetail = async (id: number) => {
 export const addComment = async (
     caseId: number,
     userId: string,
-    content: string
+    content: string,
+    ip: string
 ): Promise<void> => {
-    await db('caseComments').insert({ caseId, userId, content });
+    await db('caseComments').insert({ caseId, userId, content, ip });
 };
 
 /** 按讚 / 取消按讚，回傳按讚後狀態 */

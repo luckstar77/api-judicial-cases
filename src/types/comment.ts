@@ -22,4 +22,6 @@ export interface Comment {
   name?: string;
   email?: string;
   phone?: string;
+  /** 使用者留言時的 IP */
+  ip?: string;
 }
