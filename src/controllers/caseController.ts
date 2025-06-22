@@ -59,8 +59,9 @@ export const addComment = async (req: RequestWithUser, res: Response) => {
     try {
         await caseService.addComment(
             Number(req.params.id),
-      req.user!.uid,
-      req.body.content
+            req.user!.uid,
+            req.body.content,
+            (req.headers['x-forwarded-for'] || req.socket.remoteAddress) as string
         );
         return res.status(201).end();
     } catch (err) {

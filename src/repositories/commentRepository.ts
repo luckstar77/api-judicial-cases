@@ -2,12 +2,13 @@ import { db } from '../db';
 import { Comment } from '../types/comment';          // 自訂型別
 
 export default {
-    async insert(userId: string, filesetId: string, content: string): Promise<Comment> {
+    async insert(userId: string, filesetId: string, content: string, ip: string): Promise<Comment> {
         // ① 插入並取得 insertId
         const [result] = await db('comments').insert({
             userId,
             filesetId,
             content,
+            ip,
         });
 
         const insertId = typeof result === 'number'
@@ -17,7 +18,7 @@ export default {
         // ② 取回含使用者資訊的完整列
         const created = await db<Comment>('comments as c')
             .join('users as u', 'c.userId', 'u.uid')
-            .select('c.*', 'u.name', 'u.email', 'u.phone', 'u.ip')
+            .select('c.*', 'u.name', 'u.email', 'u.phone')
             .where('c.id', insertId)
             .first();
 
@@ -28,7 +29,7 @@ export default {
     async findByFileset(filesetId: string): Promise<Comment[]> {
         return db<Comment>('comments as c')
             .join('users as u', 'c.userId', 'u.uid')
-            .select('c.*', 'u.name', 'u.email', 'u.phone', 'u.ip')
+            .select('c.*', 'u.name', 'u.email', 'u.phone')
             .where('c.filesetId', filesetId)
             .orderBy('c.createdAt', 'desc');
     },

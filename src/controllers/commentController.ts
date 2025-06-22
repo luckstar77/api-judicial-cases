@@ -6,7 +6,8 @@ export default {
     async addComment(req: RequestWithUser, res: Response) {
         const userId = req.user!.uid;
         const { filesetId, content } = req.body;
-        const comment = await commentService.createComment(userId, filesetId, content);
+        const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress) as string;
+        const comment = await commentService.createComment(userId, filesetId, content, ip);
         res.status(201).json(comment);
     },
 
