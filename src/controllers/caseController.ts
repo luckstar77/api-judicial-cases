@@ -11,6 +11,7 @@ export const createCase = async (req: RequestWithUser, res: Response) => {
         const imageUrls = (
       req.files as Express.MulterS3.File[] | undefined
         )?.map((f) => `https://${f.bucket}.s3.amazonaws.com/${f.key}`) ?? [];
+        const ip = getClientIp(req);
 
         const id = await caseService.createCase({
             plaintiffId: req.user!.uid,
@@ -22,6 +23,7 @@ export const createCase = async (req: RequestWithUser, res: Response) => {
             defendantPhone,
             defendantIdNo,
             imageUrls,
+            ip,
         });
 
         return res.status(201).json({ id });

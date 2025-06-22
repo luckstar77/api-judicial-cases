@@ -52,6 +52,7 @@ sudo apt install mysql-client mysql-server
             -   defendantPhone `string`
             -   defendantIdNo `string`
             -   imageUrls `text`
+            -   ip `string`
             -   createdAt `timestamp`
             -   updatedAt `timestamp`
 
@@ -94,6 +95,12 @@ ALTER TABLE cases
     ADD COLUMN content TEXT AFTER title,
     ADD COLUMN location VARCHAR(20) NOT NULL AFTER content,
     ADD COLUMN district VARCHAR(20) NOT NULL AFTER location;
+```
+
+若 `cases` 表尚無 `ip` 欄位，可執行下列 SQL 新增：
+
+```sql
+ALTER TABLE cases ADD COLUMN ip VARCHAR(45) AFTER imageUrls;
 ```
 
 若 `comments` 與 `caseComments` 表尚無 `ip` 欄位，可執行下列 SQL 新增：
