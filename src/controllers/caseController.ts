@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { RequestWithUser } from '../middlewares/checkLoggedIn';
 import * as caseService from '../services/caseService';
 import { safeJsonParse } from '../utils/safeJsonParse';
+import getClientIp from '../utils/getClientIp';
 
 /** 建立新案例 */
 export const createCase = async (req: RequestWithUser, res: Response) => {
@@ -61,7 +62,7 @@ export const addComment = async (req: RequestWithUser, res: Response) => {
             Number(req.params.id),
             req.user!.uid,
             req.body.content,
-            (req.headers['x-forwarded-for'] || req.socket.remoteAddress) as string
+            getClientIp(req)
         );
         return res.status(201).end();
     } catch (err) {

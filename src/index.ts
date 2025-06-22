@@ -25,6 +25,7 @@ declare module 'express-session' {
     }
 
     const app = express();
+    app.set('trust proxy', true);
 
     app.use(cors({ credentials: true }));
     // Parse JSON bodies for this app. Equivalent to bodyParser.json()

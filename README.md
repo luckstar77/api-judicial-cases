@@ -103,6 +103,9 @@ ALTER TABLE comments ADD COLUMN ip VARCHAR(45) AFTER content;
 ALTER TABLE caseComments ADD COLUMN ip VARCHAR(45) AFTER content;
 ```
 
+應用程式會從 `X-Forwarded-For` HTTP 頭解析使用者真實 IP，若無此頭則退
+回連線位址。
+
 ## 開發流程
 
 -   sudo service mysql start
