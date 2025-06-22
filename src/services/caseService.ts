@@ -40,6 +40,8 @@ export interface CaseCommentRow {
   userId: string;
   content: string;
   createdAt: Date;
+  name?: string;
+  ip?: string;
 }
 
 /*********************************
@@ -116,9 +118,11 @@ export const getCaseDetail = async (id: number) => {
     if (!caseRow) return null;
 
     // 留言
-    const comments = await db<CaseCommentRow>('caseComments')
-        .where({ caseId: id })
-        .orderBy('createdAt');
+    const comments = await db<CaseCommentRow>('caseComments as cc')
+        .join('users as u', 'cc.userId', 'u.uid')
+        .select('cc.*', 'u.name', 'u.ip')
+        .where('cc.caseId', id)
+        .orderBy('cc.createdAt');
 
     // 按讚數
     const [{ likeCount }] = await db('caseLikes')
