@@ -170,3 +170,38 @@ export const getLikeStatus = async (
     const liked = await db('caseLikes').where({ caseId, userId }).first();
     return Boolean(liked);
 };
+
+/** 依照被告姓名、電話與身分證字號精確搜尋案例 */
+export const searchCases = async (
+    name: string,
+    phone: string,
+    idNo: string
+): Promise<CaseRow[]> => {
+    const rows = await db<CaseRow>('cases as c')
+        .join('users as u', 'c.plaintiffId', 'u.uid')
+        .select(
+            'c.id',
+            'c.plaintiffId',
+            'c.title',
+            'c.content',
+            'c.location',
+            'c.district',
+            'c.defendantName',
+            'c.defendantPhone',
+            'c.defendantIdNo',
+            'c.imageUrls',
+            'c.createdAt',
+            'c.updatedAt',
+            'u.name',
+            'u.email',
+            'u.phone',
+            'c.ip'
+        )
+        .where({
+            'c.defendantName': name,
+            'c.defendantPhone': phone,
+            'c.defendantIdNo': idNo,
+        });
+
+    return rows;
+};

@@ -103,3 +103,24 @@ export const getLikeStatus = async (
         return res.status(500).json({ message: 'getLikeStatus failed' });
     }
 };
+
+/** 依照被告姓名、電話與身分證字號搜尋案例 */
+export const searchCases = async (req: Request, res: Response) => {
+    try {
+        const { name, phone, idno } = req.query as {
+            name: string;
+            phone: string;
+            idno: string;
+        };
+
+        if (!name || !phone || !idno) {
+            return res.status(400).json({ message: 'missing parameter' });
+        }
+
+        const rows = await caseService.searchCases(name, phone, idno);
+        return res.json(rows);
+    } catch (err) {
+        console.error('searchCases error:', err);
+        return res.status(500).json({ message: 'searchCases failed' });
+    }
+};
