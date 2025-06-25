@@ -38,7 +38,13 @@ export const createCase = async (req: RequestWithUser, res: Response) => {
 export const listCases = async (_req: Request, res: Response) => {
     try {
         const rows = await caseService.listCases();
-        return res.json(rows);
+        const masked = rows.map((r) => ({
+            ...r,
+            defendantName: maskHalf(r.defendantName),
+            defendantPhone: maskHalf(r.defendantPhone),
+            defendantIdNo: maskHalf(r.defendantIdNo),
+        }));
+        return res.json(masked);
     } catch (err) {
         console.error('listCases error:', err);
         return res.status(500).json({ message: 'listCases failed' });
@@ -51,7 +57,13 @@ export const getCaseDetail = async (req: Request, res: Response) => {
         const id = Number(req.params.id);
         const detail = await caseService.getCaseDetail(id);
         if (!detail) return res.status(404).json({ message: 'not found' });
-        return res.json(detail);
+        const masked = {
+            ...detail,
+            defendantName: maskHalf(detail.defendantName),
+            defendantPhone: maskHalf(detail.defendantPhone),
+            defendantIdNo: maskHalf(detail.defendantIdNo),
+        };
+        return res.json(masked);
     } catch (err) {
         console.error('getCaseDetail error:', err);
         return res.status(500).json({ message: 'getCaseDetail failed' });
