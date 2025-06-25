@@ -172,7 +172,7 @@ export const getLikeStatus = async (
 };
 
 /** 依照關鍵字搜尋被告姓名、電話或身分證字號 */
-export const searchCases = async (keyword: string): Promise<CaseRow[]> => {
+export const searchCases = async (search: string): Promise<CaseRow[]> => {
     const rows = await db<CaseRow>('cases as c')
         .join('users as u', 'c.plaintiffId', 'u.uid')
         .select(
@@ -193,9 +193,9 @@ export const searchCases = async (keyword: string): Promise<CaseRow[]> => {
             'u.phone',
             'c.ip'
         )
-        .where('c.defendantName', keyword)
-        .orWhere('c.defendantPhone', keyword)
-        .orWhere('c.defendantIdNo', keyword);
+        .where('c.defendantName', search)
+        .orWhere('c.defendantPhone', search)
+        .orWhere('c.defendantIdNo', search);
 
     return rows;
 };

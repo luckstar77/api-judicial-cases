@@ -107,13 +107,13 @@ export const getLikeStatus = async (
 /** 依照關鍵字搜尋被告姓名、電話或身分證字號 */
 export const searchCases = async (req: Request, res: Response) => {
     try {
-        const { keyword } = req.query as { keyword?: string };
+        const { search } = req.params as { search?: string };
 
-        if (!keyword) {
+        if (!search) {
             return res.status(400).json({ message: 'missing parameter' });
         }
 
-        const rows = await caseService.searchCases(keyword);
+        const rows = await caseService.searchCases(search);
         return res.json(rows);
     } catch (err) {
         console.error('searchCases error:', err);
