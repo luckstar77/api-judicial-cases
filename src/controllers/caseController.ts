@@ -3,6 +3,7 @@ import { RequestWithUser } from '../middlewares/checkLoggedIn';
 import * as caseService from '../services/caseService';
 import { safeJsonParse } from '../utils/safeJsonParse';
 import getClientIp from '../utils/getClientIp';
+import maskHalf from '../utils/maskHalf';
 
 /** 建立新案例 */
 export const createCase = async (req: RequestWithUser, res: Response) => {
@@ -103,3 +104,27 @@ export const getLikeStatus = async (
         return res.status(500).json({ message: 'getLikeStatus failed' });
     }
 };
+
+/** 依照關鍵字搜尋被告姓名、電話或身分證字號 */
+export const searchCases = async (req: Request, res: Response) => {
+    try {
+        const { search } = req.params as { search?: string };
+
+        if (!search) {
+            return res.status(400).json({ message: 'missing parameter' });
+        }
+
+        const rows = await caseService.searchCases(search);
+        const masked = rows.map((r) => ({
+            ...r,
+            defendantName: maskHalf(r.defendantName),
+            defendantPhone: maskHalf(r.defendantPhone),
+            defendantIdNo: maskHalf(r.defendantIdNo),
+        }));
+        return res.json(masked);
+    } catch (err) {
+        console.error('searchCases error:', err);
+        return res.status(500).json({ message: 'searchCases failed' });
+    }
+};
+
