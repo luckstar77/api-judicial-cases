@@ -104,20 +104,16 @@ export const getLikeStatus = async (
     }
 };
 
-/** 依照被告姓名、電話與身分證字號搜尋案例 */
+/** 依照關鍵字搜尋被告姓名、電話或身分證字號 */
 export const searchCases = async (req: Request, res: Response) => {
     try {
-        const { name, phone, idno } = req.query as {
-            name: string;
-            phone: string;
-            idno: string;
-        };
+        const { keyword } = req.query as { keyword?: string };
 
-        if (!name || !phone || !idno) {
+        if (!keyword) {
             return res.status(400).json({ message: 'missing parameter' });
         }
 
-        const rows = await caseService.searchCases(name, phone, idno);
+        const rows = await caseService.searchCases(keyword);
         return res.json(rows);
     } catch (err) {
         console.error('searchCases error:', err);
