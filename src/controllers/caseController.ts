@@ -128,30 +128,3 @@ export const searchCases = async (req: Request, res: Response) => {
     }
 };
 
-/** 依姓名、電話與身分證字號完全相符搜尋 */
-export const searchCasesExact = async (req: Request, res: Response) => {
-    try {
-        const { name, phone, idno } = req.query as {
-            name?: string;
-            phone?: string;
-            idno?: string;
-        };
-
-        if (!name || !phone || !idno) {
-            return res.status(400).json({ message: 'missing parameter' });
-        }
-
-        const rows = await caseService.searchCasesExact(name, phone, idno);
-        const masked = rows.map((r) => ({
-            ...r,
-            defendantName: maskHalf(r.defendantName),
-            defendantPhone: maskHalf(r.defendantPhone),
-            defendantIdNo: maskHalf(r.defendantIdNo),
-        }));
-
-        return res.json(masked);
-    } catch (err) {
-        console.error('searchCasesExact error:', err);
-        return res.status(500).json({ message: 'searchCasesExact failed' });
-    }
-};

@@ -199,38 +199,3 @@ export const searchCases = async (search: string): Promise<CaseRow[]> => {
 
     return rows;
 };
-
-/** 依照姓名、電話及身分證字號完全相符搜尋 */
-export const searchCasesExact = async (
-    name: string,
-    phone: string,
-    idno: string
-): Promise<CaseRow[]> => {
-    const rows = await db<CaseRow>('cases as c')
-        .join('users as u', 'c.plaintiffId', 'u.uid')
-        .select(
-            'c.id',
-            'c.plaintiffId',
-            'c.title',
-            'c.content',
-            'c.location',
-            'c.district',
-            'c.defendantName',
-            'c.defendantPhone',
-            'c.defendantIdNo',
-            'c.imageUrls',
-            'c.createdAt',
-            'c.updatedAt',
-            'u.name',
-            'u.email',
-            'u.phone',
-            'c.ip'
-        )
-        .where({
-            'c.defendantName': name,
-            'c.defendantPhone': phone,
-            'c.defendantIdNo': idno,
-        });
-
-    return rows;
-};
