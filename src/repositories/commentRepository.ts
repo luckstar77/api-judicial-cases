@@ -18,7 +18,7 @@ export default {
         // ② 取回含使用者資訊的完整列
         const created = await db<Comment>('comments as c')
             .join('users as u', 'c.userId', 'u.uid')
-            .select('c.*', 'u.name', 'u.email', 'u.phone')
+            .select('c.*', 'u.name', 'u.email')
             .where('c.id', insertId)
             .first();
 
@@ -29,7 +29,7 @@ export default {
     async findByFileset(filesetId: string): Promise<Comment[]> {
         return db<Comment>('comments as c')
             .join('users as u', 'c.userId', 'u.uid')
-            .select('c.*', 'u.name', 'u.email', 'u.phone')
+            .select('c.*', 'u.name', 'u.email')
             .where('c.filesetId', filesetId)
             .orderBy('c.createdAt', 'desc');
     },
