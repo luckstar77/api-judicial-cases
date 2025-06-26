@@ -31,7 +31,6 @@ export interface CaseRow {
   updatedAt: Date;
   name?: string;
   email?: string;
-  phone?: string;
   ip?: string;
 }
 
@@ -85,7 +84,6 @@ export const listCases = async (): Promise<CaseRow[]> => {
             'c.updatedAt',
             'u.name',
             'u.email',
-            'u.phone',
             'c.ip'
         )
         .orderBy('c.createdAt', 'desc');
@@ -112,7 +110,6 @@ export const getCaseDetail = async (id: number) => {
             'c.updatedAt',
             'u.name',
             'u.email',
-            'u.phone',
             'c.ip'
         )
         .where('c.id', id)
@@ -190,7 +187,6 @@ export const searchCases = async (search: string): Promise<CaseRow[]> => {
             'c.updatedAt',
             'u.name',
             'u.email',
-            'u.phone',
             'c.ip'
         )
         .where('c.defendantName', search)

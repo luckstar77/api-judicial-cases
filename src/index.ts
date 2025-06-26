@@ -89,8 +89,8 @@ declare module 'express-session' {
                     uid,
                     phone,
                     ip,
-                    name, 
-                    email
+                    name,
+                    email,
                 };
                 const token = jwt.sign(userPayload, process.env.JWT_SECRET!, {
                     expiresIn: '1y', // 設定過期時間
@@ -100,7 +100,7 @@ declare module 'express-session' {
                     uid,
                     phone,
                     ip,
-                    name, 
+                    name,
                     email,
                     token,
                 });

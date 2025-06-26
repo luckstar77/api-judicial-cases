@@ -21,7 +21,6 @@ export interface Comment {
   /** 由 JOIN users 取得（可選） */
   name?: string;
   email?: string;
-  phone?: string;
   /** 使用者留言時的 IP */
   ip?: string;
 }
