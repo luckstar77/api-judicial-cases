@@ -1,4 +1,6 @@
-export default function maskHalf(value: string): string {
+export default function maskHalf(value?: string | null): string {
+    if (!value) return '';
+
     const len = value.length;
     if (len <= 1) return '*';
     const hideLen = Math.floor(len / 2);
