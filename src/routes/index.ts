@@ -6,7 +6,7 @@ import caseRoutes from './caseRoutes';
 
 const router = Router();
 
-router.use(userRoutes);
+router.use('/user', userRoutes);
 router.use(commentRoutes);
 router.use('/likes', likeRoutes);
 router.use('/case', caseRoutes);
