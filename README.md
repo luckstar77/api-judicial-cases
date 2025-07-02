@@ -110,6 +110,14 @@ ALTER TABLE comments ADD COLUMN ip VARCHAR(45) AFTER content;
 ALTER TABLE caseComments ADD COLUMN ip VARCHAR(45) AFTER content;
 ```
 
+若 `users` 表尚無以下欄位，可執行下列 SQL 新增：
+
+```sql
+ALTER TABLE users
+    ADD COLUMN password VARCHAR(255) NOT NULL AFTER phone,
+    ADD COLUMN displayName VARCHAR(100) NOT NULL AFTER name;
+```
+
 應用程式會從 `X-Forwarded-For` HTTP 頭解析使用者真實 IP，若無此頭則退
 回連線位址。
 
