@@ -25,6 +25,51 @@ export default {
     }
 };
 
+export const verify = async (req: Request, res: Response) => {
+    const { token } = req.body as { token?: string };
+    const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress) as string;
+
+    if (!token) {
+        return res.status(400).json({ message: 'missing token' });
+    }
+
+    try {
+        const decodedToken = await firebaseApp.auth().verifyIdToken(token);
+        const { uid, phone_number: phone } = decodedToken as {
+            uid?: string;
+            phone_number?: string;
+        };
+
+        if (!uid || !phone) {
+            return res.status(401).json({ message: 'Invalid token' });
+        }
+
+        await db.raw(
+            `INSERT INTO users (uid, ip, phone)
+             VALUES (?, ?, ?)
+             ON DUPLICATE KEY UPDATE
+                ip = VALUES(ip),
+                phone = VALUES(phone)`,
+            [uid, ip, phone]
+        );
+
+        const { name, email } = await db('users')
+            .select('name', 'email')
+            .where({ uid })
+            .first();
+
+        const userPayload = { uid, phone, ip, name, email };
+        const jwtToken = signJwt(userPayload);
+
+        return res
+            .status(200)
+            .json({ uid, phone, ip, name, email, token: jwtToken });
+    } catch (err) {
+        console.error('verify error:', err);
+        return res.status(401).json({ message: 'Token verification failed.' });
+    }
+};
+
 export const register = async (req: Request, res: Response) => {
     try {
         const { token, password, name, displayName, email } = req.body as {
