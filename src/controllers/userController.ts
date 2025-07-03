@@ -133,3 +133,41 @@ export const register = async (req: Request, res: Response) => {
         return res.status(500).json({ message: 'register failed' });
     }
 };
+
+export const login = async (req: Request, res: Response) => {
+    try {
+        const { phone, password } = req.body as {
+            phone?: string;
+            password?: string;
+        };
+
+        if (!phone || !password) {
+            return res.status(400).json({ message: 'missing phone or password' });
+        }
+
+        const user = await db('users').where({ phone }).first();
+        if (!user) {
+            return res.status(401).json({ message: 'invalid phone or password' });
+        }
+
+        const hashed = hashPassword(password);
+        if (user.password !== hashed) {
+            return res.status(401).json({ message: 'invalid phone or password' });
+        }
+
+        const { password: _pw, ...rest } = user;
+        const userPayload = {
+            uid: user.uid,
+            phone: user.phone,
+            ip: user.ip,
+            name: user.name,
+            email: user.email,
+        };
+        const token = signJwt(userPayload);
+
+        return res.json({ ...rest, token });
+    } catch (err) {
+        console.error('login error:', err);
+        return res.status(500).json({ message: 'login failed' });
+    }
+};
