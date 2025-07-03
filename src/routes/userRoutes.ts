@@ -8,6 +8,6 @@ router.post('/register', register);
 router.post('/verify', verify);
 router.post('/login', login);
 router.get('/', checkLoggedIn, userController.getUser);
-router.post('/', checkLoggedIn, userController.createUser);
+router.put('/', checkLoggedIn, userController.updateUser);
 
 export default router;
