@@ -12,16 +12,46 @@ export default {
         res.json(req.user);
     },
 
-    async createUser(req: RequestWithUser, res: Response) {
-        
-        await updateUser(req.user!.uid, {
-            ...req.body,
+    async updateUser(req: RequestWithUser, res: Response) {
+        const { displayName, email, password } = req.body as {
+            displayName?: string;
+            email?: string;
+            password?: string;
+        };
+
+        if (password && password.length < 8) {
+            return res
+                .status(400)
+                .json({ message: 'password must be at least 8 characters' });
+        }
+
+        const updateData: {
+            displayName?: string;
+            email?: string;
+            password?: string;
+        } = {};
+
+        if (displayName) updateData.displayName = displayName;
+        if (email) updateData.email = email;
+        if (password) updateData.password = hashPassword(password);
+
+        await updateUser(req.user!.uid, updateData);
+
+        const userInfoUpdates: { displayName?: string; email?: string } = {};
+        if (displayName) userInfoUpdates.displayName = displayName;
+        if (email) userInfoUpdates.email = email;
+        req.user = { ...req.user, ...userInfoUpdates } as RequestWithUser['user'];
+
+        const { name, phone, uid, ip } = req.user!;
+        const token = signJwt({ name, phone, email: req.user!.email, uid, ip });
+        res.status(200).json({
+            uid,
+            name,
+            phone,
+            email: req.user!.email,
+            displayName: (req.user as any).displayName,
+            token,
         });
-        req.user = {...req.user, ...req.body};
-        const {name, phone, email, uid, ip } = req.user!;
-        const userPayload = {name, phone, email, uid, ip};
-        const token = signJwt(userPayload);
-        res.status(201).json({...userPayload, token});
     }
 };
 

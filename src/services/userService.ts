@@ -5,7 +5,7 @@ export default {
         return userRepository.findById(id);
     },
 
-    async createUser(data: any) {
+    async updateUser(data: any) {
         return userRepository.create(data);
     }
-};
+}; 
