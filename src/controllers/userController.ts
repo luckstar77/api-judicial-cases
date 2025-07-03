@@ -9,7 +9,21 @@ import firebaseApp from '../lib/firebase';
 
 export default {
     async getUser(req: RequestWithUser, res: Response) {
-        res.json(req.user);
+        try {
+            const user = await db('users')
+                .where({ uid: req.user!.uid })
+                .first();
+
+            if (!user) {
+                return res.status(404).json({ message: 'user not found' });
+            }
+
+            const { password: _pw, ...rest } = user as Record<string, any>;
+            return res.json(rest);
+        } catch (err) {
+            console.error('getUser error:', err);
+            return res.status(500).json({ message: 'get user failed' });
+        }
     },
 
     async updateUser(req: RequestWithUser, res: Response) {
