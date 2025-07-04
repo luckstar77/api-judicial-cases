@@ -8,7 +8,11 @@ import maskHalf from '../utils/maskHalf';
 /** 建立新案例 */
 export const createCase = async (req: RequestWithUser, res: Response) => {
     try {
-        const { title, content, location, district, defendantName, defendantPhone, defendantIdNo } = req.body;
+        const { title, content, location, district, rent, defendantName, defendantPhone, defendantIdNo } = req.body;
+
+        if (!location) {
+            return res.status(400).json({ message: 'location is required' });
+        }
         const imageUrls = (
       req.files as Express.MulterS3.File[] | undefined
         )?.map((f) => `https://${f.bucket}.s3.amazonaws.com/${f.key}`) ?? [];
@@ -21,6 +25,7 @@ export const createCase = async (req: RequestWithUser, res: Response) => {
             defendantName,
             location,
             district,
+            rent: Number(rent),
             defendantPhone,
             defendantIdNo,
             imageUrls,
