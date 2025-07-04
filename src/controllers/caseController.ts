@@ -1,17 +1,29 @@
 import { Request, Response } from 'express';
 import { RequestWithUser } from '../middlewares/checkLoggedIn';
 import * as caseService from '../services/caseService';
-import { safeJsonParse } from '../utils/safeJsonParse';
 import getClientIp from '../utils/getClientIp';
 import maskHalf from '../utils/maskHalf';
 
 /** 建立新案例 */
 export const createCase = async (req: RequestWithUser, res: Response) => {
     try {
-        const { title, content, location, district, rent, defendantName, defendantPhone, defendantIdNo } = req.body;
+        const {
+            title,
+            content,
+            location,
+            district,
+            rent,
+            defendantName,
+            defendantPhone,
+            defendantIdNo,
+        } = req.body;
 
         if (!location) {
             return res.status(400).json({ message: 'location is required' });
+        }
+        const rentValue = parseInt(rent, 10);
+        if (Number.isNaN(rentValue)) {
+            return res.status(400).json({ message: 'invalid rent' });
         }
         const imageUrls = (
       req.files as Express.MulterS3.File[] | undefined
@@ -25,7 +37,7 @@ export const createCase = async (req: RequestWithUser, res: Response) => {
             defendantName,
             location,
             district,
-            rent: Number(rent),
+            rent: rentValue,
             defendantPhone,
             defendantIdNo,
             imageUrls,
