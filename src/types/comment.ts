@@ -19,7 +19,7 @@ export interface Comment {
   createdAt: Date;
 
   /** 由 JOIN users 取得（可選） */
-  name?: string;
+  displayName?: string;
   email?: string;
   /** 使用者留言時的 IP */
   ip?: string;

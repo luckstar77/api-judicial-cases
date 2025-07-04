@@ -29,7 +29,7 @@ export interface CaseRow {
   imageUrls: string; // 資料庫內存 JSON 字串
   createdAt: Date;
   updatedAt: Date;
-  name?: string;
+  displayName?: string;
   email?: string;
   ip?: string;
 }
@@ -40,7 +40,7 @@ export interface CaseCommentRow {
   userId: string;
   content: string;
   createdAt: Date;
-  name?: string;
+  displayName?: string;
   ip?: string;
 }
 
@@ -82,7 +82,7 @@ export const listCases = async (): Promise<CaseRow[]> => {
             'c.imageUrls',
             'c.createdAt',
             'c.updatedAt',
-            'u.name',
+            'u.displayName',
             'u.email',
             'c.ip'
         )
@@ -108,7 +108,7 @@ export const getCaseDetail = async (id: number) => {
             'c.imageUrls',
             'c.createdAt',
             'c.updatedAt',
-            'u.name',
+            'u.displayName',
             'u.email',
             'c.ip'
         )
@@ -119,7 +119,7 @@ export const getCaseDetail = async (id: number) => {
     // 留言
     const comments = await db<CaseCommentRow>('caseComments as cc')
         .join('users as u', 'cc.userId', 'u.uid')
-        .select('cc.*', 'u.name')
+        .select('cc.*', 'u.displayName')
         .where('cc.caseId', id)
         .orderBy('cc.createdAt');
 
@@ -188,7 +188,7 @@ export const searchCases = async (search: string): Promise<CaseRow[]> => {
             'c.imageUrls',
             'c.createdAt',
             'c.updatedAt',
-            'u.name',
+            'u.displayName',
             'u.email',
             'c.ip'
         )
