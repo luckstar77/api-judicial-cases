@@ -48,6 +48,7 @@ sudo apt install mysql-client mysql-server
             -   content `text`
             -   location `string` (縣市)
             -   district `string` (鄉鎮市區)
+            -   rent `int`
             -   defendantName `string`
             -   defendantPhone `string`
             -   defendantIdNo `string`
@@ -101,6 +102,12 @@ ALTER TABLE cases
 
 ```sql
 ALTER TABLE cases ADD COLUMN ip VARCHAR(45) AFTER imageUrls;
+```
+
+若 `cases` 表尚無 `rent` 欄位，可執行下列 SQL 新增：
+
+```sql
+ALTER TABLE cases ADD COLUMN rent INT AFTER district;
 ```
 
 若 `comments` 與 `caseComments` 表尚無 `ip` 欄位，可執行下列 SQL 新增：
