@@ -13,6 +13,13 @@
         -   案件 ID
         -   年份
 
+`GET /case` 可透過 query `page` 指定頁碼、`pageSize` 指定單頁
+筆數（預設 10）。
+
+新增 `GET /case/pages` API，可透過 query `pageSize` 指定單頁筆數
+（預設 10），回傳 `totalPages` 欄位，此值會以案件總數除以
+`pageSize` 計算並取整數上限，方便前端判斷頁面總數。
+
 ## 安裝 Mysql
 
 -   安裝指令
