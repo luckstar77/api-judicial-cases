@@ -52,9 +52,12 @@ export const createCase = async (req: RequestWithUser, res: Response) => {
 };
 
 /** 案例列表 */
-export const listCases = async (_req: Request, res: Response) => {
+export const listCases = async (req: Request, res: Response) => {
     try {
-        const rows = await caseService.listCases();
+        const { page } = req.query as { page?: string };
+        let pageNum = page ? parseInt(page, 10) : 1;
+        if (Number.isNaN(pageNum) || pageNum < 1) pageNum = 1;
+        const rows = await caseService.listCases(pageNum);
         const masked = rows.map((r) => ({
             ...r,
             defendantName: maskHalf(r.defendantName),

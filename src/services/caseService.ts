@@ -69,7 +69,11 @@ export const createCase = async (data: CreateCaseInput): Promise<number> => {
 };
 
 /** 取案例列表（依建立時間倒序） */
-export const listCases = async (): Promise<CaseRow[]> => {
+export const listCases = async (
+    page = 1,
+    pageSize = 10
+): Promise<CaseRow[]> => {
+    const offset = (page - 1) * pageSize;
     const rows = await db<CaseRow>('cases as c')
         .join('users as u', 'c.plaintiffId', 'u.uid')
         .select(
@@ -90,7 +94,9 @@ export const listCases = async (): Promise<CaseRow[]> => {
             'u.email',
             'c.ip'
         )
-        .orderBy('c.createdAt', 'desc');
+        .orderBy('c.createdAt', 'desc')
+        .limit(pageSize)
+        .offset(offset);
 
     return rows;
 };
