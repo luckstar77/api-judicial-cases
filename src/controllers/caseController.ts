@@ -54,10 +54,18 @@ export const createCase = async (req: RequestWithUser, res: Response) => {
 /** 案例列表 */
 export const listCases = async (req: Request, res: Response) => {
     try {
-        const { page } = req.query as { page?: string };
+        const { page, pageSize } = req.query as {
+            page?: string;
+            pageSize?: string;
+        };
+
         let pageNum = page ? parseInt(page, 10) : 1;
         if (Number.isNaN(pageNum) || pageNum < 1) pageNum = 1;
-        const rows = await caseService.listCases(pageNum);
+
+        let size = pageSize ? parseInt(pageSize, 10) : 10;
+        if (Number.isNaN(size) || size < 1) size = 10;
+
+        const rows = await caseService.listCases(pageNum, size);
         const masked = rows.map((r) => ({
             ...r,
             defendantName: maskHalf(r.defendantName),
@@ -68,6 +76,22 @@ export const listCases = async (req: Request, res: Response) => {
     } catch (err) {
         console.error('listCases error:', err);
         return res.status(500).json({ message: 'listCases failed' });
+    }
+};
+
+/** 取得案例總頁數 */
+export const getTotalPages = async (req: Request, res: Response) => {
+    try {
+        const { pageSize } = req.query as { pageSize?: string };
+        let size = pageSize ? parseInt(pageSize, 10) : 10;
+        if (Number.isNaN(size) || size < 1) size = 10;
+
+        const totalCount = await caseService.countCases();
+        const totalPages = Math.ceil(totalCount / size);
+        return res.json({ totalPages });
+    } catch (err) {
+        console.error('getTotalPages error:', err);
+        return res.status(500).json({ message: 'getTotalPages failed' });
     }
 };
 

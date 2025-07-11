@@ -25,6 +25,7 @@ const router = Router();
 
 router.post('/', checkLoggedIn, upload.array('images', 10), caseCtrl.createCase);
 router.get('/', caseCtrl.listCases);
+router.get('/pages', caseCtrl.getTotalPages);
 router.get('/search/:search', checkLoggedIn, caseCtrl.searchCases);
 router.get('/:id', caseCtrl.getCaseDetail);
 router.post('/:id/comments', checkLoggedIn, caseCtrl.addComment);

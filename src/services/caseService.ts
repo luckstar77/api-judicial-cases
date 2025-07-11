@@ -101,6 +101,12 @@ export const listCases = async (
     return rows;
 };
 
+/** 計算案例總數 */
+export const countCases = async (): Promise<number> => {
+    const [{ count }] = await db('cases').count('* as count');
+    return Number(count || 0);
+};
+
 /** 取單一案例詳情，包含留言與按讚數 */
 export const getCaseDetail = async (id: number) => {
     const caseRow = await db<CaseRow>('cases as c')
