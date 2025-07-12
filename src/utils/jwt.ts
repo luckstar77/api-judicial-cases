@@ -6,6 +6,7 @@ interface UserPayload {
   ip: string;
   name?: string;
   email?: string;
+  displayName?: string;
 }
 
 export function signJwt(payload: UserPayload): string {

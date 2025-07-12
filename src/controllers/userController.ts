@@ -97,17 +97,17 @@ export const verify = async (req: Request, res: Response) => {
             [uid, ip, phone]
         );
 
-        const { name, email } = await db('users')
-            .select('name', 'email')
+        const { name, email, displayName } = await db('users')
+            .select('name', 'email', 'displayName')
             .where({ uid })
             .first();
 
-        const userPayload = { uid, phone, ip, name, email };
+        const userPayload = { uid, phone, ip, name, email, displayName };
         const jwtToken = signJwt(userPayload);
 
         return res
             .status(200)
-            .json({ uid, phone, ip, name, email, token: jwtToken });
+            .json({ uid, phone, ip, name, email, displayName, token: jwtToken });
     } catch (err) {
         console.error('verify error:', err);
         return res.status(401).json({ message: 'Token verification failed.' });
