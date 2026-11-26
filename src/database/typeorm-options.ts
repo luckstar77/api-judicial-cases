@@ -12,6 +12,9 @@ export interface DatabaseConnectionConfig {
 }
 
 const POOL_SIZE = 10;
+/** 閒置連線在 MySQL wait_timeout（正式機 8 小時）之前由應用程式自己關掉，避免拿到已被伺服器斷開的連線 */
+const POOL_IDLE_TIMEOUT_MS = 60_000;
+const POOL_MAX_IDLE = 2;
 export const MIGRATIONS_TABLE_NAME = 'typeorm_migrations';
 
 export function buildTypeOrmOptions(config: DatabaseConnectionConfig): DataSourceOptions {
@@ -35,5 +38,6 @@ export function buildTypeOrmOptions(config: DatabaseConnectionConfig): DataSourc
     migrationsRun: config.runMigrations ?? false,
     synchronize: false,
     poolSize: POOL_SIZE,
+    extra: { enableKeepAlive: true, idleTimeout: POOL_IDLE_TIMEOUT_MS, maxIdle: POOL_MAX_IDLE },
   };
 }
