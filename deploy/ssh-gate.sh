@@ -22,6 +22,14 @@ fi
 
 release="$APP_ROOT/releases/$sha"
 staging="$release.incoming"
+
+# 重跑同一個 commit 的部署：線上版本不能被覆寫（會刪掉執行中的檔案），直接視為完成
+if [[ -L "$APP_ROOT/current" && "$(readlink -f "$APP_ROOT/current")" == "$release" ]]; then
+  cat >/dev/null
+  echo "$sha is already live; nothing to deploy"
+  exit 0
+fi
+
 rm -rf "$staging"
 mkdir -p "$staging"
 tar -xzf - -C "$staging" --no-same-owner --no-same-permissions

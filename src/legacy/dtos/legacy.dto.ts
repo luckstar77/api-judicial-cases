@@ -162,6 +162,12 @@ export class LegacyUpdateUserBody {
   @IsString()
   @Length(PASSWORD_MIN_LENGTH, PASSWORD_MAX_LENGTH)
   password?: string;
+
+  @ApiPropertyOptional({ description: '目前密碼；帳號已設定密碼時，改密碼必填' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(PASSWORD_MAX_LENGTH)
+  currentPassword?: string;
 }
 
 /** 舊版回應格式（不加 { status, code, data } 外框） */

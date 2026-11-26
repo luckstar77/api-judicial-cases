@@ -9,7 +9,7 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RequestUser } from '../common/interfaces/request-user.interface';
 import { CASE_IMAGE_FIELD, CASE_UPLOAD_OPTIONS, MAX_CASE_IMAGES } from './case-upload.options';
-import { CaseNotFoundError, CaseService } from './case.service';
+import { CaseNotFoundError, CaseService, InvalidCaseImageError } from './case.service';
 import {
   CaseDetailQuery,
   CaseListItemResponse,
@@ -61,11 +61,16 @@ export class CaseController {
     @ClientIp() ip: string,
     @UploadedFiles() images: Express.Multer.File[] = [],
   ): Promise<ApiSuccessResponse<CreatedCaseResponse>> {
-    return success(await this.caseService.create({ userId: user.uid, ip, body, images }));
+    try {
+      return success(await this.caseService.create({ userId: user.uid, ip, body, images }));
+    } catch (error) {
+      throw translateCaseError(error);
+    }
   }
 }
 
 export function translateCaseError(error: unknown): unknown {
   if (error instanceof CaseNotFoundError) return new ApiException(ErrorCodes.NOT_FOUND, error.message);
+  if (error instanceof InvalidCaseImageError) return new ApiException(ErrorCodes.VALIDATION_ERROR, error.message);
   return error;
 }

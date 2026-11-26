@@ -28,7 +28,7 @@ Swagger UI：`/apidocs`
 | 20400 | 200 | 查無資料（例如 detail 找不到 id） |
 | 40000 | 200 | 參數驗證失敗 |
 | 40100 | 401 | 未登入或 token 無效 / 過期 |
-| 40101 | 200 | 手機或密碼錯誤 |
+| 40101 | 200 | 手機或密碼錯誤（含改密碼時目前密碼錯誤） |
 | 40102 | 200 | Firebase 簡訊驗證 token 無效 |
 | 40900 | 200 | 資料衝突（例如手機已註冊） |
 | 42900 | 429 | 請求過於頻繁 |
@@ -39,6 +39,10 @@ Swagger UI：`/apidocs`
 ### 驗證
 
 `Authorization: Bearer <accessToken>`。標示「登入」的 API 必須帶；標示「選擇性」的 API 帶了會多回傳個人狀態（例如 `liked`）。
+
+- token 只含 `uid` 與 token 版本，不含任何個資。
+- 改密碼後，之前簽發的 token 全部失效（HTTP 401），請改用 `PATCH /v1/users/me` 回傳的新 token。
+- 限流：每 IP 每分鐘 300 次；登入、註冊、簡訊驗證每 IP 每分鐘 10 次。
 
 ### 分頁
 
@@ -83,11 +87,15 @@ Data：`UserProfile`
 
 ### `PATCH /v1/users/me`（登入）
 
-Body：`{ "displayName"?: string(1-30), "email"?: string(email), "password"?: string(8-64) }`
+Body：`{ "displayName"?: string(1-30), "email"?: string(email), "password"?: string(8-64), "currentPassword"?: string }`
 Data：`AuthResult`（會換發 token）
 
+- 帶 `password` 時，若帳號已設定密碼（`hasPassword: true`）必須帶正確的 `currentPassword`，否則 `40101`。
+- 只用簡訊登入、尚未設定密碼的帳號（`hasPassword: false`）可以直接設定第一組密碼。
+- 改密碼成功後舊 token 全部失效。
+
 ```ts
-interface UserProfile { uid: string; phone: string; name?: string; displayName?: string; email?: string }
+interface UserProfile { uid: string; phone: string; name?: string; displayName?: string; email?: string; hasPassword: boolean }
 interface AuthResult { user: UserProfile; accessToken: string }
 ```
 
@@ -155,7 +163,7 @@ Data：`LikeState`
 
 ### `GET /v1/cases` — 列表
 
-Query：`page`、`limit`、`city`（選填，例：`台北市`）、`district`（選填）
+Query：`page`、`limit`、`city`（選填，例：`台北市`；`臺` 也可以）、`district`（選填）
 Data：`Paginated<CaseListItem>`，依建立時間新到舊（id 為次排序）
 
 ### `GET /v1/cases/search` — 依對象搜尋（登入）
@@ -170,6 +178,9 @@ Data：`CaseDetail`；找不到 → `20400`
 ### `POST /v1/cases`（登入，`multipart/form-data`）
 
 欄位：`title`(1-100)、`content`(1-5000)、`location`(縣市，必須是台灣縣市清單中的值)、`district`(必須屬於該縣市)、`rent`(整數 0-1000000)、`defendantName`(1-32)、`defendantPhone`(選填，≤16)、`defendantIdNo`(選填，≤16)、`images`(選填，最多 10 張，每張 ≤ 5MB，jpeg/png/webp/gif)
+
+- `location` / `district` 的「台」「臺」兩種寫法都接受，存成清單中的寫法（例：`臺北市` → `台北市`、`臺西鄉` → `台西鄉`）。
+- 圖片以檔案內容判斷格式，內容與宣告的 Content-Type 不符 → `40000`。
 Data：`{ id: number }`（HTTP 201）
 
 ### `GET /v1/case_comments?caseId=`

@@ -1,12 +1,14 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { CaseListItemVO } from '../database/repositories/interfaces/case.interface';
 import { maskHalf } from '../common/utils/mask.util';
 import { buildPaginated, Paginated } from '../common/utils/pagination.util';
+import { detectImageType } from '../storage/image-type.util';
 import { StorageService, UploadableFile } from '../storage/storage.service';
 import { CaseListItemResponse, CreateCaseBody, CreatedCaseResponse, ListCasesQuery, SearchCasesQuery } from './dtos/case.dto';
 
 export class CaseNotFoundError extends Error {}
+export class InvalidCaseImageError extends Error {}
 
 const SEPARATOR_PATTERN = /[\s-]/g;
 const LOCAL_MOBILE_PATTERN = /^09\d{8}$/;
@@ -31,6 +33,8 @@ export interface CreateCaseInputData {
 
 @Injectable()
 export class CaseService {
+  private readonly logger = new Logger(CaseService.name);
+
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly storageService: StorageService,
@@ -65,21 +69,30 @@ export class CaseService {
     if (!(await this.databaseService.caseRepository.existsById(id))) throw new CaseNotFoundError(`case ${id} not found`);
   }
 
+  /** 圖片內容先驗證再上傳；寫入資料庫失敗時刪掉剛上傳的圖片，避免留下沒有案例的公開檔案 */
   async create(input: CreateCaseInputData): Promise<CreatedCaseResponse> {
+    assertImagesMatchContent(input.images);
     const imageUrls = input.images.length > 0 ? await this.storageService.uploadCaseImages(input.images) : [];
-    return this.databaseService.caseRepository.create({
-      plaintiffId: input.userId,
-      title: input.body.title,
-      content: input.body.content,
-      location: input.body.location,
-      district: input.body.district,
-      rent: input.body.rent,
-      defendantName: input.body.defendantName,
-      defendantPhone: input.body.defendantPhone,
-      defendantIdNo: input.body.defendantIdNo,
-      imageUrls,
-      ip: input.ip,
-    });
+    try {
+      const created = await this.databaseService.caseRepository.create({
+        plaintiffId: input.userId,
+        title: input.body.title,
+        content: input.body.content,
+        location: input.body.location,
+        district: input.body.district,
+        rent: input.body.rent,
+        defendantName: input.body.defendantName,
+        defendantPhone: input.body.defendantPhone,
+        defendantIdNo: input.body.defendantIdNo,
+        imageUrls,
+        ip: input.ip,
+      });
+      this.logger.log(`case created: id=${created.id} uid=${input.userId} images=${imageUrls.length}`);
+      return created;
+    } catch (error) {
+      await this.storageService.deleteByUrls(imageUrls);
+      throw error;
+    }
   }
 
   /** 舊版 GET /case/pages 使用 */
@@ -87,6 +100,13 @@ export class CaseService {
     const count = await this.databaseService.caseRepository.count();
     return Math.ceil(count / pageSize);
   }
+}
+
+/** 不信任用戶端宣告的 Content-Type：檔案開頭必須是同一種圖片格式 */
+function assertImagesMatchContent(images: UploadableFile[]): void {
+  images.forEach((image, index) => {
+    if (detectImageType(image.buffer) !== image.mimetype) throw new InvalidCaseImageError(`images[${index}] is not a valid ${image.mimetype} file`);
+  });
 }
 
 /** 公開輸出：遮罩對象個資，不含回報者 uid / ip */

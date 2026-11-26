@@ -23,28 +23,28 @@ describe('auth guards', () => {
   });
 
   describe('JwtAuthGuard', () => {
-    it('should attach the user when the token is valid', () => {
-      mockTokenService.verify.mockReturnValue({ uid: 'uid-1', phone: '+886912345678' });
+    it('should attach the user when the token is valid', async () => {
+      mockTokenService.authenticate.mockResolvedValue({ uid: 'uid-1' });
       const request: Partial<AuthenticatedRequest> = { headers: { authorization: 'Bearer good' } };
 
-      expect(new JwtAuthGuard(tokenService).canActivate(contextFor(request))).toBe(true);
+      await expect(new JwtAuthGuard(tokenService).canActivate(contextFor(request))).resolves.toBe(true);
       expect(request.user).toEqual({ uid: 'uid-1' });
     });
 
-    it('should reject missing or invalid tokens', () => {
-      mockTokenService.verify.mockReturnValue(undefined);
+    it('should reject missing, invalid or revoked tokens', async () => {
+      mockTokenService.authenticate.mockResolvedValue(undefined);
 
-      expect(() => new JwtAuthGuard(tokenService).canActivate(contextFor({ headers: {} }))).toThrow(ApiException);
-      expect(() => new JwtAuthGuard(tokenService).canActivate(contextFor({ headers: { authorization: 'Bearer bad' } }))).toThrow(ApiException);
+      await expect(new JwtAuthGuard(tokenService).canActivate(contextFor({ headers: {} }))).rejects.toBeInstanceOf(ApiException);
+      await expect(new JwtAuthGuard(tokenService).canActivate(contextFor({ headers: { authorization: 'Bearer bad' } }))).rejects.toBeInstanceOf(ApiException);
     });
   });
 
   describe('OptionalJwtAuthGuard', () => {
-    it('should continue as guest when the token is invalid', () => {
-      mockTokenService.verify.mockReturnValue(undefined);
+    it('should continue as guest when the token is invalid', async () => {
+      mockTokenService.authenticate.mockResolvedValue(undefined);
       const request: Partial<AuthenticatedRequest> = { headers: { authorization: 'Bearer bad' } };
 
-      expect(new OptionalJwtAuthGuard(tokenService).canActivate(contextFor(request))).toBe(true);
+      await expect(new OptionalJwtAuthGuard(tokenService).canActivate(contextFor(request))).resolves.toBe(true);
       expect(request.user).toBeUndefined();
     });
   });

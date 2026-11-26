@@ -47,20 +47,43 @@ describe('AuthService', () => {
   describe('register', () => {
     it('should store a scrypt hash instead of the plain password', async () => {
       databaseService.userRepository.hasPasswordForPhone.mockResolvedValue(false);
+      databaseService.userRepository.completeRegistration.mockResolvedValue(true);
 
       await service.register({ firebaseToken: 'valid:uid-1:+886912345678', ...profile }, '1.2.3.4');
 
-      const input = databaseService.userRepository.register.mock.calls[0][0];
+      const input = databaseService.userRepository.completeRegistration.mock.calls[0][0];
       expect(input).toMatchObject({ uid: 'uid-1', phone: '+886912345678', name: '王小明', displayName: '小明', email: 'ming@example.com' });
       expect(input.passwordHash.startsWith('scrypt$')).toBe(true);
       expect(input.passwordHash).not.toContain(profile.password);
+      expect(databaseService.userRepository.insertRegisteredUser).not.toHaveBeenCalled();
+    });
+
+    it('should insert a new row when no passwordless row exists for the uid', async () => {
+      databaseService.userRepository.hasPasswordForPhone.mockResolvedValue(false);
+      databaseService.userRepository.completeRegistration.mockResolvedValue(false);
+      databaseService.userRepository.insertRegisteredUser.mockResolvedValue(true);
+
+      await service.register({ firebaseToken: 'valid:uid-1:+886912345678', ...profile }, '1.2.3.4');
+
+      expect(databaseService.userRepository.insertRegisteredUser).toHaveBeenCalledWith(expect.objectContaining({ uid: 'uid-1' }));
+      expect(mockUserService.createSession).toHaveBeenCalledWith('uid-1');
+    });
+
+    it('should throw PhoneAlreadyRegisteredError when neither update nor insert writes a row', async () => {
+      databaseService.userRepository.hasPasswordForPhone.mockResolvedValue(false);
+      databaseService.userRepository.completeRegistration.mockResolvedValue(false);
+      databaseService.userRepository.insertRegisteredUser.mockResolvedValue(false);
+
+      await expect(service.register({ firebaseToken: 'valid:uid-1:+886912345678', ...profile }, '1.2.3.4')).rejects.toBeInstanceOf(PhoneAlreadyRegisteredError);
+      expect(mockUserService.createSession).not.toHaveBeenCalled();
     });
 
     it('should throw PhoneAlreadyRegisteredError when the phone already has a password', async () => {
       databaseService.userRepository.hasPasswordForPhone.mockResolvedValue(true);
 
       await expect(service.register({ firebaseToken: 'valid:uid-1:+886912345678', ...profile }, '1.2.3.4')).rejects.toBeInstanceOf(PhoneAlreadyRegisteredError);
-      expect(databaseService.userRepository.register).not.toHaveBeenCalled();
+      expect(databaseService.userRepository.completeRegistration).not.toHaveBeenCalled();
+      expect(databaseService.userRepository.insertRegisteredUser).not.toHaveBeenCalled();
     });
   });
 
@@ -111,7 +134,8 @@ describe('AuthService', () => {
     it('should map the session through UserService.toProfile', () => {
       mockUserService.toProfile.mockReturnValue({ uid: 'uid-1', phone: '+886912345678' });
 
-      expect(service.toResult({ user: { uid: 'uid-1', phone: '+886912345678', ip: '1.2.3.4' }, accessToken: 'token' })).toEqual({
+      const user = { uid: 'uid-1', phone: '+886912345678', ip: '1.2.3.4', hasPassword: true, tokenVersion: 0 };
+      expect(service.toResult({ user, accessToken: 'token' })).toEqual({
         user: { uid: 'uid-1', phone: '+886912345678' },
         accessToken: 'token',
       });

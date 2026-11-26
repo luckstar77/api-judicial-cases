@@ -16,6 +16,14 @@ export interface PasswordVerifyResult {
   needsRehash: boolean;
 }
 
+/** 沒有帳號或沒有密碼時，仍對這個固定雜湊跑一次 scrypt，讓回應時間不洩漏手機是否已註冊 */
+let dummyHash: Promise<string> | undefined;
+
+function getDummyHash(): Promise<string> {
+  dummyHash ??= hashPassword(randomBytes(SALT_LENGTH).toString('base64'));
+  return dummyHash;
+}
+
 function deriveKey(password: string, salt: Buffer, options: ScryptOptions): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     scrypt(password, salt, KEY_LENGTH, options, (error, key) => (error ? reject(error) : resolve(key)));
@@ -30,15 +38,22 @@ export async function hashPassword(password: string): Promise<string> {
 }
 
 export async function verifyPassword(password: string, storedHash?: string): Promise<PasswordVerifyResult> {
-  if (!storedHash) return { isValid: false, needsRehash: false };
+  if (!storedHash) {
+    await verifyScrypt(password, await getDummyHash());
+    return { isValid: false, needsRehash: false };
+  }
 
   if (LEGACY_SHA256_PATTERN.test(storedHash)) {
     const legacyHash = createHash('sha256').update(password).digest('hex');
     return { isValid: safeEqual(Buffer.from(legacyHash), Buffer.from(storedHash)), needsRehash: true };
   }
 
+  return { isValid: await verifyScrypt(password, storedHash), needsRehash: false };
+}
+
+async function verifyScrypt(password: string, storedHash: string): Promise<boolean> {
   const [prefix, cost, blockSize, parallelization, saltBase64, keyBase64] = storedHash.split(HASH_SEPARATOR);
-  if (prefix !== SCRYPT_PREFIX || !saltBase64 || !keyBase64) return { isValid: false, needsRehash: false };
+  if (prefix !== SCRYPT_PREFIX || !saltBase64 || !keyBase64) return false;
 
   const expectedKey = Buffer.from(keyBase64, 'base64');
   const actualKey = await deriveKey(password, Buffer.from(saltBase64, 'base64'), {
@@ -46,7 +61,7 @@ export async function verifyPassword(password: string, storedHash?: string): Pro
     r: Number(blockSize),
     p: Number(parallelization),
   });
-  return { isValid: safeEqual(actualKey, expectedKey), needsRehash: false };
+  return safeEqual(actualKey, expectedKey);
 }
 
 function safeEqual(a: Buffer, b: Buffer): boolean {

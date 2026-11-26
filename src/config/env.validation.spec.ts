@@ -5,7 +5,7 @@ describe('validateEnv', () => {
   const required = { JWT_SECRET: 'secret', FIREBASE_PROJECT_ID: 'project', S3_BUCKET_NAME: 'bucket' };
 
   it('should apply defaults', () => {
-    expect(validateEnv(required)).toMatchObject({ PORT: 3010, HOST: '127.0.0.1', JWT_EXPIRES_IN: '30d', THROTTLE_LIMIT: 120, AUTH_THROTTLE_LIMIT: 10 });
+    expect(validateEnv(required)).toMatchObject({ PORT: 3010, HOST: '127.0.0.1', JWT_EXPIRES_IN: '30d', THROTTLE_LIMIT: 300, AUTH_THROTTLE_LIMIT: 10 });
   });
 
   it('should throw when JWT_SECRET is missing or empty', () => {

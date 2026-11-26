@@ -48,12 +48,14 @@ src/
 
 ### 安全性
 
-- 密碼使用 scrypt（含 salt）；舊版 SHA-256 密碼在登入成功時自動升級。
+- 密碼使用 scrypt（含 salt）；舊版 SHA-256 密碼在登入成功時自動升級。查無帳號時仍會跑一次 scrypt，回應時間不洩漏手機是否已註冊。
+- JWT 只含 `uid` 與 `tv`（token 版本）。改密碼需要目前密碼，改完 `users.tokenVersion + 1`，舊 token 全部失效；guard 每次都會確認帳號存在且版本相同。
 - 搜尋一律完全比對（不再使用 `LIKE`，`%` 不會被當成萬用字元）。
 - 公開 API 不回傳 email、完整 IP、uid；對象姓名 / 電話 / 身分證中間遮罩，留言 IP 只顯示前兩段。
 - 只信任 loopback（nginx）帶來的 `X-Forwarded-For`；只監聽 `127.0.0.1`。
-- helmet、CORS 白名單、全域限流 120 次/分鐘、登入相關 10 次/分鐘。
-- 上傳最多 10 張、每張 5MB、限 jpeg/png/webp/gif，通過驗證後才上傳 S3。
+- helmet、CORS 白名單（正式環境未設定 `CORS_ORIGINS` 時只允許 `https://rental.imallenlai.com`）、全域限流 300 次/分鐘、登入相關 10 次/分鐘。
+  舊前端的讀取路徑（legacy `GET`）不限流：舊版每張卡片各自打 3 個請求，舊伺服器原本也沒有限流；寫入與登入仍限流。
+- 上傳最多 10 張、每張 5MB、限 jpeg/png/webp/gif，並以檔案開頭的 magic bytes 確認內容格式，通過驗證後才上傳 S3；寫入資料庫失敗時刪除剛上傳的圖片。
 
 ### 資料庫
 
@@ -67,6 +69,7 @@ src/
 | `1764100000001-fix-case-engagement-keys` | `caseComments` / `caseLikes` 補上 AUTO_INCREMENT 主鍵（原本在 STRICT 模式下無法新增）、同一人重複按讚的唯一索引 |
 | `1764100000002-add-search-indexes` | 判決原告 / 被告 / 縣市租金 / 日期、案例對象欄位、手機索引 |
 | `1764100000003-widen-user-ip` | `users.ip` 加寬到 45 字元（IPv6） |
+| `1764100000004-add-user-token-version` | `users.tokenVersion`（改密碼時遞增，讓舊 token 失效） |
 
 ## 本機開發
 
@@ -97,8 +100,9 @@ E2E 測試會先跑全部 migration，Firebase 與 S3 以 mock 取代（token �
   1. 解壓到 `~/rental-housing/api/releases/<sha>`，連結 `shared/.env`，`npm ci --omit=dev`
   2. 有待執行的 migration 時先 `mysqldump` 備份到 `~/rental-housing/api/backups/`（保留 5 份）再 migrate
   3. 切換 `~/rental-housing/api/current` → 新版本，重啟 pm2 `rental`
-  4. 30 秒內 `/v1/health` 必須回 `db: up`，否則自動切回上一版
+  4. 30 秒內 `/v1/health` 必須回 `db: up`，否則自動切回上一版；第一個 release 就失敗時，改用 `shared/legacy-ecosystem.config.js` 恢復舊版服務
   5. 保留最近 5 個 release
+- 重跑已經在線上的同一個 commit 不會重新部署（避免覆寫執行中的檔案）。讀不到 migration 狀態時直接中止部署。
 - 部署金鑰在主機上以 forced command（`deploy/ssh-gate.sh`）限制，只能執行 `deploy-api <sha>`，無法取得 shell 或轉發 port。
 
 GitHub `production` environment secrets：`EC2_HOST`、`EC2_USER`、`EC2_SSH_KEY`、`EC2_KNOWN_HOSTS`。

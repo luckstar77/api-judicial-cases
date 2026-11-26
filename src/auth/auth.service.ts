@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { FirebaseService } from '../firebase/firebase.service';
 import { hashPassword, verifyPassword } from '../common/utils/password.util';
+import { maskHalf } from '../common/utils/mask.util';
 import { normalizeTaiwanPhone } from '../common/utils/phone.util';
 import { AuthSession, UserService } from '../user/user.service';
 import { AuthResultResponse } from '../user/dtos/user.dto';
@@ -12,6 +13,8 @@ export class PhoneAlreadyRegisteredError extends Error {}
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly firebaseService: FirebaseService,
@@ -31,7 +34,7 @@ export class AuthService {
       throw new PhoneAlreadyRegisteredError('phone already registered');
     }
 
-    await this.databaseService.userRepository.register({
+    const input = {
       uid: identity.uid,
       phone: identity.phone,
       ip,
@@ -39,7 +42,14 @@ export class AuthService {
       name: body.name,
       displayName: body.displayName,
       email: body.email,
-    });
+    };
+    // 先做過簡訊驗證 → 補上密碼與資料；沒有這個 uid → 新增。同一個 uid 已有密碼（含並發重複送出）→ 衝突
+    // 同手機但不同 uid 的舊資料不搬動主鍵（留言 / 按讚以 uid 關聯），登入時會優先取有密碼的那筆
+    const isRegistered =
+      (await this.databaseService.userRepository.completeRegistration(input)) || (await this.databaseService.userRepository.insertRegisteredUser(input));
+    if (!isRegistered) throw new PhoneAlreadyRegisteredError('phone already registered');
+
+    this.logger.log(`user registered: uid=${identity.uid}`);
     return this.userService.createSession(identity.uid);
   }
 
@@ -47,7 +57,10 @@ export class AuthService {
   async login(phone: string, password: string): Promise<AuthSession> {
     const credential = await this.databaseService.userRepository.findCredentialByPhone(normalizeTaiwanPhone(phone));
     const result = await verifyPassword(password, credential?.passwordHash);
-    if (!credential || !result.isValid) throw new InvalidCredentialsError('invalid phone or password');
+    if (!credential || !result.isValid) {
+      this.logger.warn(`login failed: phone=${maskHalf(normalizeTaiwanPhone(phone))}`);
+      throw new InvalidCredentialsError('invalid phone or password');
+    }
 
     if (result.needsRehash) {
       await this.databaseService.userRepository.updatePasswordHash(credential.uid, await hashPassword(password));

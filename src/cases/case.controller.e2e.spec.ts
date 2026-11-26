@@ -196,6 +196,50 @@ describe('CaseController E2E', () => {
       expect(res.body).toMatchObject({ status: 'error', code: 40000 });
     });
 
+    it('should return code 40000 when the file content is not the declared image type', async () => {
+      const user = await createUser(dataSource);
+
+      const res = await request(app.getHttpServer())
+        .post('/v1/cases')
+        .set('Authorization', bearer(tokenService, user.uid))
+        .field('title', 't')
+        .field('content', 'c')
+        .field('location', '台北市')
+        .field('district', '大安區')
+        .field('rent', '1000')
+        .field('defendantName', '某人')
+        .attach('images', Buffer.from('<svg onload="alert(1)"></svg>'), { filename: 'fake.png', contentType: 'image/png' })
+        .expect(200);
+
+      expect(res.body).toMatchObject({ status: 'error', code: 40000 });
+      expect(mockStorageService.uploadCaseImages).not.toHaveBeenCalled();
+      expect(await dataSource.getRepository(Case).count()).toBe(0);
+    });
+
+    it('should accept both 台 and 臺 spellings and store the canonical one', async () => {
+      const user = await createUser(dataSource);
+      const post = (location: string, district: string) =>
+        request(app.getHttpServer())
+          .post('/v1/cases')
+          .set('Authorization', bearer(tokenService, user.uid))
+          .field('title', 't')
+          .field('content', 'c')
+          .field('location', location)
+          .field('district', district)
+          .field('rent', '1000')
+          .field('defendantName', '某人')
+          .expect(201);
+
+      const taipei = await post('臺北市', '大安區');
+      const yunlin = await post('雲林縣', '臺西鄉');
+      const pingtung = await post('屏東縣', '霧台鄉');
+
+      const repository = dataSource.getRepository(Case);
+      await expect(repository.findOneByOrFail({ id: taipei.body.data.id })).resolves.toMatchObject({ location: '台北市', district: '大安區' });
+      await expect(repository.findOneByOrFail({ id: yunlin.body.data.id })).resolves.toMatchObject({ location: '雲林縣', district: '台西鄉' });
+      await expect(repository.findOneByOrFail({ id: pingtung.body.data.id })).resolves.toMatchObject({ location: '屏東縣', district: '霧臺鄉' });
+    });
+
     it('should require login', async () => {
       await request(app.getHttpServer()).post('/v1/cases').field('title', 't').expect(401);
     });

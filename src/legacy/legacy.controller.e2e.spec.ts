@@ -210,5 +210,26 @@ describe('LegacyController E2E', () => {
       expect(updated.body).toMatchObject({ uid, displayName: '改名', token: expect.any(String) });
       expect((await dataSource.getRepository(User).findOneByOrFail({ uid })).displayName).toBe('改名');
     });
+
+    it('PUT /user should return 401 and keep the password when currentPassword is missing', async () => {
+      const user = await createUser(dataSource, { plainPassword: 'old-password' });
+
+      await request(app.getHttpServer()).put('/user').set('Authorization', bearer(tokenService, user.uid)).send({ password: 'new-password' }).expect(401);
+
+      const login = await request(app.getHttpServer()).post('/user/login').send({ phone: user.phone, password: 'old-password' });
+      expect(login.status).toBe(200);
+    });
+
+    it('PUT /user should change the password with the correct currentPassword', async () => {
+      const user = await createUser(dataSource, { plainPassword: 'old-password' });
+
+      await request(app.getHttpServer())
+        .put('/user')
+        .set('Authorization', bearer(tokenService, user.uid))
+        .send({ password: 'new-password', currentPassword: 'old-password' })
+        .expect(200);
+
+      await request(app.getHttpServer()).post('/user/login').send({ phone: user.phone, password: 'new-password' }).expect(200);
+    });
   });
 });

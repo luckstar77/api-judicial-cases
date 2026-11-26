@@ -31,7 +31,7 @@ export async function createTestApp(): Promise<TestApp> {
   return { app, dataSource: app.get(DataSource), tokenService: app.get(TokenService) };
 }
 
-/** 產生登入用的 Authorization header */
-export function bearer(tokenService: TokenService, uid: string, phone = '+886900000000'): string {
-  return `Bearer ${tokenService.sign({ uid, phone })}`;
+/** 產生登入用的 Authorization header（使用者需已存在，token 版本預設 0） */
+export function bearer(tokenService: TokenService, uid: string, tokenVersion = 0): string {
+  return `Bearer ${tokenService.sign({ uid, tv: tokenVersion })}`;
 }

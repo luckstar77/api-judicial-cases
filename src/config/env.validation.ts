@@ -7,7 +7,8 @@ export type NodeEnvironment = (typeof NODE_ENVIRONMENTS)[number];
 const DEFAULT_PORT = 3010;
 const DEFAULT_DB_PORT = 3306;
 const MAX_PORT = 65535;
-const DEFAULT_THROTTLE_LIMIT = 120;
+/** 每個 IP 每分鐘；同一個電信 NAT 後面可能有很多使用者，不宜太低 */
+const DEFAULT_THROTTLE_LIMIT = 300;
 const DEFAULT_AUTH_THROTTLE_LIMIT = 10;
 
 /** 所有環境變數集中在這裡驗證；缺少必要設定時應用程式直接啟動失敗 */

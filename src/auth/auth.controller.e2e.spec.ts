@@ -37,7 +37,7 @@ describe('AuthController E2E', () => {
         .expect(200);
 
       expect(res.body).toMatchObject({ status: 'ok', code: 20000, data: { user: { uid, phone } } });
-      expect(tokenService.verify(res.body.data.accessToken)).toMatchObject({ uid, phone });
+      await expect(tokenService.authenticate(res.body.data.accessToken)).resolves.toEqual({ uid });
       const saved = await dataSource.getRepository(User).findOneByOrFail({ uid });
       expect(saved.phone).toBe(phone);
       expect(saved.ip).toBe('203.0.113.7');
@@ -93,6 +93,32 @@ describe('AuthController E2E', () => {
       expect(await dataSource.getRepository(User).countBy({ phone })).toBe(1);
     });
 
+    it('should keep an older passwordless row of the same phone and its uid untouched', async () => {
+      const older = await createUser(dataSource);
+      const uid = fakeFirebaseUid();
+
+      await request(app.getHttpServer())
+        .post('/v1/auth/register')
+        .send({ firebaseToken: fakeFirebaseToken(uid, older.phone), ...profile })
+        .expect(201);
+
+      const rows = await dataSource.getRepository(User).find({ where: { phone: older.phone }, order: { uid: 'ASC' } });
+      expect(rows.map((row) => row.uid.trim()).sort()).toEqual([older.uid, uid].sort());
+      const login = await request(app.getHttpServer()).post('/v1/auth/login').send({ phone: older.phone, password: profile.password }).expect(200);
+      expect(login.body.data.user.uid).toBe(uid);
+    });
+
+    it('should return code 40900 for the second of two identical registrations', async () => {
+      const uid = fakeFirebaseUid();
+      const phone = fakeTaiwanPhone();
+      const send = () => request(app.getHttpServer()).post('/v1/auth/register').send({ firebaseToken: fakeFirebaseToken(uid, phone), ...profile });
+
+      const codes = (await Promise.all([send(), send()])).map((res) => res.body.code).sort();
+
+      expect(codes).toEqual([20000, 40900]);
+      expect(await dataSource.getRepository(User).countBy({ phone })).toBe(1);
+    });
+
     it('should return code 40900 when the phone already has a password', async () => {
       const existing = await createUser(dataSource, { plainPassword: 'existing-pass' });
 
@@ -121,7 +147,7 @@ describe('AuthController E2E', () => {
       const res = await request(app.getHttpServer()).post('/v1/auth/login').send({ phone: '0912345678', password: 'my-password' }).expect(200);
 
       expect(res.body).toMatchObject({ status: 'ok', code: 20000, data: { user: { uid: user.uid, phone: user.phone } } });
-      expect(tokenService.verify(res.body.data.accessToken)?.uid).toBe(user.uid);
+      await expect(tokenService.authenticate(res.body.data.accessToken)).resolves.toEqual({ uid: user.uid });
     });
 
     it('should upgrade a legacy sha256 password to scrypt after successful login', async () => {

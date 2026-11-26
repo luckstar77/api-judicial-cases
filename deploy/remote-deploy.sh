@@ -11,7 +11,8 @@ SHARED_ENV="$APP_ROOT/shared/.env"
 BACKUP_DIR="$APP_ROOT/backups"
 PM2_APP="rental"
 ECOSYSTEM="$HOME/ecosystem.config.js"
-HEALTH_URL="http://127.0.0.1:3010/v1/health"
+# 第一次切換到 releases 架構前的 pm2 設定（舊版 Express）；第一個 release 就失敗時用它恢復服務
+LEGACY_ECOSYSTEM="$APP_ROOT/shared/legacy-ecosystem.config.js"
 HEALTH_RETRIES=30
 KEEP_RELEASES=5
 KEEP_BACKUPS=5
@@ -29,8 +30,14 @@ export PATH="$NODE_BIN:$PATH"
 env_value() {
   local value
   value="$(grep -E "^$1=" "$SHARED_ENV" | tail -n1 | cut -d= -f2- || true)"
+  # 去掉 .env 常見的成對引號：KEY="value" / KEY='value'
+  if [[ "$value" =~ ^\"(.*)\"$ || "$value" =~ ^\'(.*)\'$ ]]; then
+    value="${BASH_REMATCH[1]}"
+  fi
   echo "${value:-$2}"
 }
+
+HEALTH_URL="http://127.0.0.1:$(env_value PORT 3010)/v1/health"
 
 cd "$RELEASE"
 ln -sfn "$SHARED_ENV" .env
@@ -40,7 +47,9 @@ npm ci --omit=dev --no-audit --no-fund --loglevel=error
 
 TYPEORM=(node node_modules/typeorm/cli.js)
 DATA_SOURCE="dist/database/data-source.js"
-pending="$("${TYPEORM[@]}" migration:show -d "$DATA_SOURCE" | grep -c '\[ \]' || true)"
+# migration:show 失敗時必須中止，不能當成「沒有待執行的 migration」
+migration_status="$("${TYPEORM[@]}" migration:show -d "$DATA_SOURCE")" || fail "cannot read migration status"
+pending="$(grep -c '\[ \]' <<<"$migration_status" || true)"
 if [[ "$pending" -gt 0 ]]; then
   mkdir -p "$BACKUP_DIR"
   backup="$BACKUP_DIR/$(env_value DB_NAME rental)-$(date -u +%Y%m%dT%H%M%SZ)-${SHA:0:7}.sql.gz"
@@ -56,7 +65,11 @@ else
   log "no pending migrations"
 fi
 
-PREVIOUS="$(readlink -f "$CURRENT" 2>/dev/null || true)"
+# current 還不存在（第一次部署）時 PREVIOUS 必須是空的；readlink -f 對不存在的路徑仍會印出路徑
+PREVIOUS=""
+if [[ -L "$CURRENT" ]]; then
+  PREVIOUS="$(readlink -f "$CURRENT")"
+fi
 
 switch_to() {
   ln -sfn "$1" "$CURRENT.next"
@@ -108,6 +121,15 @@ if ! healthy; then
     else
       log "rollback ALSO unhealthy, manual action required"
     fi
+  elif [[ -z "$PREVIOUS" && -f "$LEGACY_ECOSYSTEM" ]]; then
+    # 第一個 release 就失敗：拿掉 current，讓下一次部署仍視為第一次，並恢復舊版服務
+    log "first release failed; restoring the pre-release app from $LEGACY_ECOSYSTEM"
+    rm -f "$CURRENT"
+    "$PM2" delete "$PM2_APP" >/dev/null 2>&1 || true
+    "$PM2" start "$LEGACY_ECOSYSTEM" --only "$PM2_APP" >/dev/null
+    "$PM2" save >/dev/null
+  else
+    log "no previous release to roll back to, manual action required"
   fi
   fail "deploy of $SHA failed"
 fi

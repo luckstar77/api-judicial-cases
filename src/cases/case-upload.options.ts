@@ -8,12 +8,12 @@ export const CASE_IMAGE_FIELD = 'images';
 export const MAX_CASE_IMAGES = 10;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
-/** 圖片先放在記憶體，通過驗證後才上傳 S3 */
+/** 圖片先放在記憶體；這裡先擋宣告的格式，CaseService 再以檔案內容（magic bytes）確認後才上傳 S3 */
 export const CASE_UPLOAD_OPTIONS: MulterOptions = {
   storage: memoryStorage(),
   limits: { fileSize: MAX_IMAGE_BYTES, files: MAX_CASE_IMAGES },
   fileFilter: (_request, file, callback) => {
-    if (file.mimetype in ALLOWED_IMAGE_TYPES) {
+    if (Object.hasOwn(ALLOWED_IMAGE_TYPES, file.mimetype)) {
       callback(null, true);
       return;
     }

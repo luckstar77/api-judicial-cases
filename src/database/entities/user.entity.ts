@@ -23,4 +23,8 @@ export class User {
 
   @Column({ type: 'varchar', length: 100, nullable: true })
   displayName?: string;
+
+  /** 改密碼時遞增，token 內的版本不同就失效 */
+  @Column({ type: 'int', default: 0 })
+  tokenVersion: number;
 }

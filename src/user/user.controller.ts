@@ -7,7 +7,7 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RequestUser } from '../common/interfaces/request-user.interface';
 import { AuthResultResponse, UpdateMeBody, UserProfileResponse } from './dtos/user.dto';
-import { UserNotFoundError, UserService } from './user.service';
+import { CurrentPasswordMismatchError, UserNotFoundError, UserService } from './user.service';
 
 @ApiTags('users')
 @ApiBearerAuth()
@@ -22,7 +22,7 @@ export class UserController {
     try {
       return success(this.userService.toProfile(await this.userService.getUser(user.uid)));
     } catch (error) {
-      throw this.translate(error);
+      throw translateUserError(error);
     }
   }
 
@@ -33,13 +33,14 @@ export class UserController {
       const session = await this.userService.updateProfile(user.uid, body);
       return success({ user: this.userService.toProfile(session.user), accessToken: session.accessToken });
     } catch (error) {
-      throw this.translate(error);
+      throw translateUserError(error);
     }
   }
+}
 
-  private translate(error: unknown): unknown {
-    // token 有效但帳號已不存在，視同未登入
-    if (error instanceof UserNotFoundError) return new ApiException(ErrorCodes.UNAUTHORIZED, error.message);
-    return error;
-  }
+export function translateUserError(error: unknown): unknown {
+  // token 有效但帳號已不存在，視同未登入
+  if (error instanceof UserNotFoundError) return new ApiException(ErrorCodes.UNAUTHORIZED, error.message);
+  if (error instanceof CurrentPasswordMismatchError) return new ApiException(ErrorCodes.INVALID_CREDENTIALS, error.message);
+  return error;
 }

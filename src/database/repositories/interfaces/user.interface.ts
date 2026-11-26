@@ -5,6 +5,8 @@ export interface UserVO {
   name?: string;
   email?: string;
   displayName?: string;
+  hasPassword: boolean;
+  tokenVersion: number;
 }
 
 export interface UserCredentialVO extends UserVO {

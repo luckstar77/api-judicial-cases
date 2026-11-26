@@ -1,10 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
 import { User } from '../../entities';
 import { RegisterUserInput, UpdateUserProfileInput, UpsertPhoneUserInput, UserCredentialVO, UserVO } from '../interfaces/user.interface';
 
-const USER_FIELDS = ['u.uid', 'u.phone', 'u.ip', 'u.name', 'u.email', 'u.displayName'];
+const USER_FIELDS = ['u.uid', 'u.phone', 'u.ip', 'u.name', 'u.email', 'u.displayName', 'u.password', 'u.tokenVersion'];
+
+/** mysql2 INSERT 結果 */
+interface InsertResultHeader {
+  affectedRows?: number;
+}
 
 @Injectable()
 export class UserRepository {
@@ -15,11 +21,16 @@ export class UserRepository {
     return row ? this.toVO(row) : undefined;
   }
 
+  async findTokenVersion(uid: string): Promise<number | undefined> {
+    const row = await this.repository.createQueryBuilder('u').select(['u.uid', 'u.tokenVersion']).where('u.uid = :uid', { uid }).getOne();
+    return row ? row.tokenVersion : undefined;
+  }
+
   /** 同一支手機可能因重新驗證而有多筆，優先取已設定密碼的那筆 */
   async findCredentialByPhone(phone: string): Promise<UserCredentialVO | undefined> {
     const row = await this.repository
       .createQueryBuilder('u')
-      .select([...USER_FIELDS, 'u.password'])
+      .select(USER_FIELDS)
       .where('u.phone = :phone', { phone })
       .orderBy('u.password IS NULL', 'ASC')
       .addOrderBy('u.uid', 'ASC')
@@ -28,11 +39,7 @@ export class UserRepository {
   }
 
   async findCredentialByUid(uid: string): Promise<UserCredentialVO | undefined> {
-    const row = await this.repository
-      .createQueryBuilder('u')
-      .select([...USER_FIELDS, 'u.password'])
-      .where('u.uid = :uid', { uid })
-      .getOne();
+    const row = await this.repository.createQueryBuilder('u').select(USER_FIELDS).where('u.uid = :uid', { uid }).getOne();
     return row ? { ...this.toVO(row), passwordHash: row.password ?? undefined } : undefined;
   }
 
@@ -46,14 +53,49 @@ export class UserRepository {
     await this.repository.createQueryBuilder().insert().into(User).values(input).orUpdate(['ip', 'phone'], ['uid']).execute();
   }
 
-  /**
-   * 註冊：
-   * 1. 已有同一個 uid（先做過簡訊驗證）→ 更新該筆
-   * 2. 同手機有尚未設定密碼的舊資料 → 沿用該筆並換成新的 uid
-   * 3. 否則新增
-   */
-  async register(input: RegisterUserInput): Promise<void> {
-    const values = {
+  /** 只更新尚未設定密碼的那筆（單一 UPDATE，並發註冊時只有一個會成功）；回傳是否有更新 */
+  async completeRegistration(input: RegisterUserInput): Promise<boolean> {
+    const result = await this.repository
+      .createQueryBuilder()
+      .update(User)
+      .set(this.toRegistrationValues(input))
+      .where('uid = :uid', { uid: input.uid })
+      .andWhere('password IS NULL')
+      .execute();
+    return (result.affected ?? 0) > 0;
+  }
+
+  /** uid 已存在時不寫入（INSERT IGNORE）；回傳是否有新增 */
+  async insertRegisteredUser(input: RegisterUserInput): Promise<boolean> {
+    const result = await this.repository.createQueryBuilder().insert().into(User).values(this.toRegistrationValues(input)).orIgnore().execute();
+    const header = result.raw as InsertResultHeader;
+    return (header.affectedRows ?? 0) > 0;
+  }
+
+  /** 有新密碼時 tokenVersion + 1，之前簽發的 token 全部失效 */
+  async updateProfile(uid: string, input: UpdateUserProfileInput): Promise<void> {
+    const values: QueryDeepPartialEntity<User> = {};
+    if (input.displayName !== undefined) values.displayName = input.displayName;
+    if (input.email !== undefined) values.email = input.email;
+    if (input.passwordHash !== undefined) {
+      values.password = input.passwordHash;
+      values.tokenVersion = () => 'tokenVersion + 1';
+    }
+    if (Object.keys(values).length === 0) return;
+    await this.repository.createQueryBuilder().update(User).set(values).where('uid = :uid', { uid }).execute();
+  }
+
+  /** 舊格式密碼升級：密碼本身沒變，不影響已簽發的 token */
+  async updatePasswordHash(uid: string, passwordHash: string): Promise<void> {
+    await this.repository.createQueryBuilder().update(User).set({ password: passwordHash }).where('uid = :uid', { uid }).execute();
+  }
+
+  count(): Promise<number> {
+    return this.repository.count();
+  }
+
+  private toRegistrationValues(input: RegisterUserInput): QueryDeepPartialEntity<User> {
+    return {
       uid: input.uid,
       phone: input.phone,
       ip: input.ip,
@@ -62,43 +104,6 @@ export class UserRepository {
       displayName: input.displayName,
       email: input.email,
     };
-
-    const sameUid = await this.repository.createQueryBuilder('u').where('u.uid = :uid', { uid: input.uid }).getCount();
-    if (sameUid > 0) {
-      await this.repository.createQueryBuilder().update(User).set(values).where('uid = :uid', { uid: input.uid }).execute();
-      return;
-    }
-
-    const legacy = await this.repository
-      .createQueryBuilder('u')
-      .select(['u.uid'])
-      .where('u.phone = :phone', { phone: input.phone })
-      .andWhere('u.password IS NULL')
-      .orderBy('u.uid', 'ASC')
-      .getOne();
-    if (legacy) {
-      await this.repository.createQueryBuilder().update(User).set(values).where('uid = :uid', { uid: legacy.uid }).execute();
-      return;
-    }
-
-    await this.repository.createQueryBuilder().insert().into(User).values(values).execute();
-  }
-
-  async updateProfile(uid: string, input: UpdateUserProfileInput): Promise<void> {
-    const values: Partial<User> = {};
-    if (input.displayName !== undefined) values.displayName = input.displayName;
-    if (input.email !== undefined) values.email = input.email;
-    if (input.passwordHash !== undefined) values.password = input.passwordHash;
-    if (Object.keys(values).length === 0) return;
-    await this.repository.createQueryBuilder().update(User).set(values).where('uid = :uid', { uid }).execute();
-  }
-
-  async updatePasswordHash(uid: string, passwordHash: string): Promise<void> {
-    await this.repository.createQueryBuilder().update(User).set({ password: passwordHash }).where('uid = :uid', { uid }).execute();
-  }
-
-  count(): Promise<number> {
-    return this.repository.count();
   }
 
   private toVO(row: User): UserVO {
@@ -109,6 +114,8 @@ export class UserRepository {
       name: row.name?.trim() || undefined,
       email: row.email?.trim() || undefined,
       displayName: row.displayName ?? undefined,
+      hasPassword: Boolean(row.password),
+      tokenVersion: row.tokenVersion ?? 0,
     };
   }
 }

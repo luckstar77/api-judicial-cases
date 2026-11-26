@@ -32,7 +32,7 @@ export function toJudgmentCity(city: string): string {
 }
 
 export function isTaiwanCity(city: string): city is TaiwanCity {
-  return Object.prototype.hasOwnProperty.call(TAIWAN_CITY_DISTRICTS, city);
+  return Object.hasOwn(TAIWAN_CITY_DISTRICTS, city);
 }
 
 export function isDistrictOfCity(city: string, district: string): boolean {
@@ -42,3 +42,22 @@ export function isDistrictOfCity(city: string, district: string): boolean {
 }
 
 export const TAIWAN_CITIES = Object.keys(TAIWAN_CITY_DISTRICTS) as TaiwanCity[];
+
+/** 台 / 臺 視為相同字 */
+function normalizeTai(value: string): string {
+  return value.trim().replace(/臺/g, '台');
+}
+
+/** 臺北市 / 台北市 → 清單中的正式寫法；不在清單內回傳 undefined */
+export function toCanonicalCity(city: string): TaiwanCity | undefined {
+  const normalized = normalizeTai(city);
+  return TAIWAN_CITIES.find((candidate) => normalizeTai(candidate) === normalized);
+}
+
+/** 臺西鄉 / 台西鄉 → 清單中的正式寫法；縣市或鄉鎮不在清單內回傳 undefined */
+export function toCanonicalDistrict(city: string, district: string): string | undefined {
+  const canonicalCity = toCanonicalCity(city);
+  if (!canonicalCity) return undefined;
+  const normalized = normalizeTai(district);
+  return TAIWAN_CITY_DISTRICTS[canonicalCity].find((candidate) => normalizeTai(candidate) === normalized);
+}

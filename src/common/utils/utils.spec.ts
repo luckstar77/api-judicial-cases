@@ -1,4 +1,4 @@
-import { isDistrictOfCity, isTaiwanCity, toJudgmentCity } from './city.util';
+import { isDistrictOfCity, isTaiwanCity, toCanonicalCity, toCanonicalDistrict, toJudgmentCity } from './city.util';
 import { normalizeIp } from './ip.util';
 import { maskHalf, maskIp } from './mask.util';
 import { buildPaginated } from './pagination.util';
@@ -75,6 +75,19 @@ describe('utils', () => {
       expect(isTaiwanCity('火星市')).toBe(false);
       expect(isDistrictOfCity('台北市', '大安區')).toBe(true);
       expect(isDistrictOfCity('台北市', '板橋區')).toBe(false);
+    });
+
+    it('should treat 台 and 臺 as the same character', () => {
+      expect(toCanonicalCity('臺北市')).toBe('台北市');
+      expect(toCanonicalDistrict('雲林縣', '臺西鄉')).toBe('台西鄉');
+      expect(toCanonicalDistrict('屏東縣', '霧台鄉')).toBe('霧臺鄉');
+      expect(toCanonicalDistrict('台北市', '板橋區')).toBeUndefined();
+      expect(toCanonicalCity('火星市')).toBeUndefined();
+    });
+
+    it('should not treat Object prototype keys as cities', () => {
+      expect(isTaiwanCity('constructor')).toBe(false);
+      expect(toCanonicalDistrict('constructor', 'x')).toBeUndefined();
     });
   });
 

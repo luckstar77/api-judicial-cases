@@ -8,11 +8,11 @@ import { extractBearerToken } from './bearer-token.util';
 export class OptionalJwtAuthGuard implements CanActivate {
   constructor(private readonly tokenService: TokenService) {}
 
-  canActivate(context: ExecutionContext): boolean {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const token = extractBearerToken(request);
-    const payload = token ? this.tokenService.verify(token) : undefined;
-    if (payload) request.user = { uid: payload.uid };
+    const session = token ? await this.tokenService.authenticate(token) : undefined;
+    if (session) request.user = { uid: session.uid };
     return true;
   }
 }

@@ -3,7 +3,7 @@ import { DatabaseService } from '../database/database.service';
 import { createMockDatabaseService, MockDatabaseService } from '../database/test/mock';
 import { StorageService } from '../storage/storage.service';
 import { mockStorageService } from '../storage/test/mock';
-import { buildSearchKeywords, CaseNotFoundError, CaseService } from './case.service';
+import { CaseNotFoundError, CaseService, InvalidCaseImageError, buildSearchKeywords } from './case.service';
 
 describe('CaseService', () => {
   let service: CaseService;
@@ -80,6 +80,8 @@ describe('CaseService', () => {
   });
 
   describe('create', () => {
+    const pngImage = { buffer: Buffer.from('89504e470d0a1a0a0000000d49484452', 'hex'), mimetype: 'image/png' };
+
     it('should skip S3 when there are no images', async () => {
       databaseService.caseRepository.create.mockResolvedValue({ id: 5 });
 
@@ -90,13 +92,28 @@ describe('CaseService', () => {
 
     it('should store the uploaded image urls', async () => {
       databaseService.caseRepository.create.mockResolvedValue({ id: 6 });
-      const image = { buffer: Buffer.from('x'), mimetype: 'image/png' };
 
-      await service.create({ userId: 'u', ip: '1.1.1.1', body, images: [image] });
+      await service.create({ userId: 'u', ip: '1.1.1.1', body, images: [pngImage] });
 
       expect(databaseService.caseRepository.create).toHaveBeenCalledWith(
         expect.objectContaining({ imageUrls: ['https://test-bucket.s3.amazonaws.com/cases/test-0.jpg'] }),
       );
+    });
+
+    it('should throw InvalidCaseImageError before uploading when content does not match the declared type', async () => {
+      const disguised = { buffer: Buffer.from('<svg onload=alert(1)>'), mimetype: 'image/png' };
+
+      await expect(service.create({ userId: 'u', ip: '1.1.1.1', body, images: [pngImage, disguised] })).rejects.toBeInstanceOf(InvalidCaseImageError);
+      expect(mockStorageService.uploadCaseImages).not.toHaveBeenCalled();
+      expect(databaseService.caseRepository.create).not.toHaveBeenCalled();
+    });
+
+    it('should delete the uploaded images when the database insert fails', async () => {
+      const failure = new Error('db down');
+      databaseService.caseRepository.create.mockRejectedValue(failure);
+
+      await expect(service.create({ userId: 'u', ip: '1.1.1.1', body, images: [pngImage] })).rejects.toBe(failure);
+      expect(mockStorageService.deleteByUrls).toHaveBeenCalledWith(['https://test-bucket.s3.amazonaws.com/cases/test-0.jpg']);
     });
   });
 

@@ -6,12 +6,15 @@ import helmet from 'helmet';
 import { EnvironmentVariables } from './config/env.validation';
 
 export const API_DEFAULT_VERSION = '1';
-const DEFAULT_CORS_ORIGINS = ['https://rental.imallenlai.com', 'http://localhost:5173', 'http://localhost:4173', 'http://localhost:3011'];
+const PRODUCTION_CORS_ORIGINS = ['https://rental.imallenlai.com'];
+const DEVELOPMENT_CORS_ORIGINS = [...PRODUCTION_CORS_ORIGINS, 'http://localhost:5173', 'http://localhost:4173', 'http://localhost:3011'];
+const PRODUCTION_ENV = 'production';
 const CORS_MAX_AGE_SECONDS = 86400;
 const SWAGGER_PATH = 'apidocs';
 
-function parseOrigins(value?: string): string[] {
-  if (!value) return DEFAULT_CORS_ORIGINS;
+/** 未設定 CORS_ORIGINS 時：正式環境只允許正式網域，其他環境另外允許本機前端 */
+export function resolveCorsOrigins(value: string | undefined, nodeEnv: string): string[] {
+  if (!value) return nodeEnv === PRODUCTION_ENV ? PRODUCTION_CORS_ORIGINS : DEVELOPMENT_CORS_ORIGINS;
   return value
     .split(',')
     .map((origin) => origin.trim())
@@ -27,7 +30,7 @@ export function configureApp(app: NestExpressApplication): void {
   app.disable('x-powered-by');
   app.use(helmet({ contentSecurityPolicy: false, crossOriginResourcePolicy: { policy: 'cross-origin' } }));
   app.enableCors({
-    origin: parseOrigins(config.get('CORS_ORIGINS', { infer: true })),
+    origin: resolveCorsOrigins(config.get('CORS_ORIGINS', { infer: true }), config.get('NODE_ENV', { infer: true })),
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Authorization', 'Content-Type'],
     maxAge: CORS_MAX_AGE_SECONDS,

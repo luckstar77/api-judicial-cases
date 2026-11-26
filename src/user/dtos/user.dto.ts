@@ -28,6 +28,12 @@ export class UpdateMeBody {
   @IsString()
   @Length(PASSWORD_MIN_LENGTH, PASSWORD_MAX_LENGTH)
   password?: string;
+
+  @ApiPropertyOptional({ description: '目前密碼；帳號已設定密碼時，改密碼必填', maxLength: PASSWORD_MAX_LENGTH })
+  @IsOptional()
+  @IsString()
+  @MaxLength(PASSWORD_MAX_LENGTH)
+  currentPassword?: string;
 }
 
 export class UserProfileResponse {
@@ -45,6 +51,9 @@ export class UserProfileResponse {
 
   @ApiPropertyOptional({ description: 'Email' })
   email?: string;
+
+  @ApiProperty({ description: '是否已設定密碼（false 表示只用簡訊登入，改密碼不需要目前密碼）' })
+  hasPassword: boolean;
 }
 
 export class AuthResultResponse {
