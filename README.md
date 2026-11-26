@@ -1,231 +1,130 @@
-## 流程
+# 租屋通 API（api-judicial-cases）
 
--   連接 mysql
--   建立 express 連線
--   建立 API 查詢姓名取得資訊
-    -   判斷是否有原告或被告姓名
-    -   若有回傳資訊，沒有回傳 404
-        -   原告姓名
-        -   被告姓名
-        -   租金
-        -   地區
-        -   勝訴方
-        -   案件 ID
-        -   年份
+租屋通後端：查詢法院租賃判決、高風險名單、網友回報的惡房客／惡房東案例、留言與按讚、手機簡訊登入。
 
-`GET /case` 可透過 query `page` 指定頁碼、`pageSize` 指定單頁
-筆數（預設 10）。
+- 正式環境：`https://api.rental.imallenlai.com`
+- API 文件：[`docs/api-v1.md`](docs/api-v1.md)；Swagger UI：`/apidocs`
+- 前端：[web-judicial-cases](https://github.com/luckstar77/web-judicial-cases)
 
-新增 `GET /case/pages` API，可透過 query `pageSize` 指定單頁筆數
-（預設 10），回傳 `totalPages` 欄位，此值會以案件總數除以
-`pageSize` 計算並取整數上限，方便前端判斷頁面總數。
+## 技術
 
-## 安裝 Mysql
+| 項目 | 版本 / 套件 |
+|------|-------------|
+| Runtime | Node.js 22 LTS（`.nvmrc`） |
+| 框架 | NestJS 11（Express） |
+| 資料庫 | MySQL 8.0 + TypeORM 0.3（migration 管理 schema，`synchronize: false`） |
+| 驗證 | Firebase 手機簡訊 ID token → 自簽 JWT（30 天） |
+| 檔案 | AWS S3（案例證據照片） |
+| 測試 | Jest + Supertest（E2E 連真實 MySQL） |
 
--   安裝指令
+## 架構
 
 ```
-https://dev.mysql.com/get/mysql-apt-config_0.8.22-1_all.deb
-sudo dpkg -i mysql-apt-config_0.8.22-1_all.deb
-sudo apt update
-sudo apt-cache policy mysql-server
-sudo apt install mysql-client mysql-server
+Controller ──► Service ──► DatabaseService ──► Repository ──► Entity (TypeORM)
+    │             └──► FirebaseService / StorageService / TokenService
+    └── Guard（JwtAuthGuard / OptionalJwtAuthGuard）、ValidationPipe、AllExceptionsFilter、ThrottlerGuard
 ```
 
--   設定密碼
-
-## 資料庫
-
--   mysql
-    -   rental
-        -   judicialFileset
-            -   id `string`
-            -   plaintiff `string`
-            -   defendant `string`
-            -   city `string`
-            -   win `enum`
-                -   plaintiff
-                -   defendant
-            -   rent `int`
-            -   jyear `string`
-        -   cases
-            -   id `auto`
-            -   plaintiffId `string`
-            -   title `string`
-            -   content `text`
-            -   location `string` (縣市)
-            -   district `string` (鄉鎮市區)
-            -   rent `int`
-            -   defendantName `string`
-            -   defendantPhone `string`
-            -   defendantIdNo `string`
-            -   imageUrls `text`
-            -   ip `string`
-            -   createdAt `timestamp`
-            -   updatedAt `timestamp`
-
-### 台灣縣市列表
-
-所有縣市及其鄉鎮市區請參考 `src/utils/taiwanDistricts.ts`
-
 ```
-台北市
-新北市
-桃園市
-台中市
-台南市
-高雄市
-基隆市
-新竹市
-新竹縣
-苗栗縣
-彰化縣
-南投縣
-雲林縣
-嘉義市
-嘉義縣
-屏東縣
-宜蘭縣
-花蓮縣
-台東縣
-金門縣
-澎湖縣
-連江縣
+src/
+├── auth/            手機簡訊驗證、註冊、密碼登入（/v1/auth/*）
+├── user/            個人資料（/v1/users/me）
+├── judgment/        判決搜尋、詳情、高風險名單、縣市統計、判決留言 / 按讚
+├── cases/           網友回報案例、圖片上傳、案例留言 / 按讚
+├── stats/           首頁統計
+├── health/          /v1/health、/health
+├── legacy/          舊前端使用的未加版號路徑（deprecated，回應格式維持原樣）
+├── common/          回應格式、錯誤碼、例外 filter、guard、decorator、工具函式
+├── config/          環境變數驗證（啟動時缺少必要設定會直接失敗）
+├── database/        entities、repositories、migrations、DatabaseService、測試 factory
+├── firebase/ storage/ token/   外部服務包裝
+├── app.module.ts / app.setup.ts / main.ts
 ```
 
-### 新增欄位
+### 回應格式
 
-若 `cases` 表尚無 `title` 與 `content` 欄位，可執行下列 SQL 新增：
+`/v1/*` 一律回傳 `{ status, code, data }`；錯誤為 `{ status: 'error', code, error: { message } }`。
+業務錯誤（查無資料、驗證失敗、帳密錯誤…）HTTP 200，未登入 401、限流 429、伺服器錯誤 500。完整代碼見 `docs/api-v1.md`。
 
-```sql
-ALTER TABLE cases
-    ADD COLUMN title VARCHAR(255) NOT NULL AFTER plaintiffId,
-    ADD COLUMN content TEXT AFTER title,
-    ADD COLUMN location VARCHAR(20) NOT NULL AFTER content,
-    ADD COLUMN district VARCHAR(20) NOT NULL AFTER location;
+### 安全性
+
+- 密碼使用 scrypt（含 salt）；舊版 SHA-256 密碼在登入成功時自動升級。查無帳號時仍會跑一次 scrypt，回應時間不洩漏手機是否已註冊。
+- JWT 只含 `uid` 與 `tv`（token 版本）。改密碼需要目前密碼，改完 `users.tokenVersion + 1`，舊 token 全部失效；guard 每次都會確認帳號存在且版本相同。
+- 搜尋一律完全比對（不再使用 `LIKE`，`%` 不會被當成萬用字元）。
+- 公開 API 不回傳 email、完整 IP、uid；對象姓名 / 電話 / 身分證中間遮罩，留言 IP 只顯示前兩段。
+- 只信任 loopback（nginx）帶來的 `X-Forwarded-For`；只監聽 `127.0.0.1`。
+- helmet、CORS 白名單（正式環境未設定 `CORS_ORIGINS` 時只允許 `https://rental.imallenlai.com`）、全域限流 300 次/分鐘、登入相關 10 次/分鐘。
+  舊前端的讀取路徑（legacy `GET`）不限流：舊版每張卡片各自打 3 個請求，舊伺服器原本也沒有限流；寫入與登入仍限流。
+- 上傳最多 10 張、每張 5MB、限 jpeg/png/webp/gif，並以檔案開頭的 magic bytes 確認內容格式，通過驗證後才上傳 S3；寫入資料庫失敗時刪除剛上傳的圖片。
+
+### 資料庫
+
+沿用既有正式資料表（`users`、`cases`、`caseComments`、`caseLikes`、`judicialFileset`、`comments`、`likes`），
+欄位命名維持 camelCase、`users` 以 Firebase uid 為主鍵，與 Cedars 新表規範（snake_case、UUID、`is_deleted`）不同，
+是為了不搬動正式資料；新表請依規範建立。
+
+| Migration | 內容 |
+|-----------|------|
+| `1764100000000-baseline-schema` | 以正式機 DDL 建表（`IF NOT EXISTS`，正式機不會變動） |
+| `1764100000001-fix-case-engagement-keys` | `caseComments` / `caseLikes` 補上 AUTO_INCREMENT 主鍵（原本在 STRICT 模式下無法新增）、同一人重複按讚的唯一索引 |
+| `1764100000002-add-search-indexes` | 判決原告 / 被告 / 縣市租金 / 日期、案例對象欄位、手機索引 |
+| `1764100000003-widen-user-ip` | `users.ip` 加寬到 45 字元（IPv6） |
+| `1764100000004-add-user-token-version` | `users.tokenVersion`（改密碼時遞增，讓舊 token 失效） |
+
+## 本機開發
+
+```bash
+nvm use                 # Node.js 22
+npm ci
+cp .env.example .env    # 填入 JWT_SECRET、FIREBASE_PROJECT_ID、S3_BUCKET_NAME 等
+npm run migration:run   # 需先 npm run build
+npm run start:dev       # http://localhost:3010，Swagger：/apidocs
 ```
 
-若 `cases` 表尚無 `ip` 欄位，可執行下列 SQL 新增：
+## 測試
 
-```sql
-ALTER TABLE cases ADD COLUMN ip VARCHAR(45) AFTER imageUrls;
+```bash
+npm run db:test:up      # 啟動 E2E 用 MySQL 8.0（docker，port 3307，資料在 tmpfs）
+npm test                # unit tests（全部 mock，不連資料庫）
+npm run test:e2e        # E2E（真實 MySQL，每個測試前清空）
+npm run test:cov        # unit + E2E 合併覆蓋率
+npm run lint && npm run typecheck
 ```
 
-若 `cases` 表尚無 `rent` 欄位，可執行下列 SQL 新增：
+E2E 測試會先跑全部 migration，Firebase 與 S3 以 mock 取代（token 格式 `valid:<uid>:<phone>`）。
 
-```sql
-ALTER TABLE cases ADD COLUMN rent INT AFTER district;
+## CI / CD（GitHub Actions：`.github/workflows/ci.yml`）
+
+- **每個 push / PR**：lint → typecheck → unit + E2E（MySQL 8.0 service）→ build。
+- **push 到 `main`**：測試通過後打包 `dist`，以 `production` environment 的部署金鑰 SSH 到 EC2，執行 `deploy/remote-deploy.sh`：
+  1. 解壓到 `~/rental-housing/api/releases/<sha>`，連結 `shared/.env`，`npm ci --omit=dev`
+  2. 有待執行的 migration 時先 `mysqldump` 備份到 `~/rental-housing/api/backups/`（保留 5 份）再 migrate
+  3. 切換 `~/rental-housing/api/current` → 新版本，重啟 pm2 `rental`
+  4. 30 秒內 `/v1/health` 必須回 `db: up`，否則自動切回上一版；第一個 release 就失敗時，改用 `shared/legacy-ecosystem.config.js` 恢復舊版服務
+  5. 保留最近 5 個 release
+- 重跑已經在線上的同一個 commit 不會重新部署（避免覆寫執行中的檔案）。讀不到 migration 狀態時直接中止部署。
+- `shared/legacy-ecosystem.config.js`：舊版 Express 的 pm2 設定（絕對路徑 `cwd`），只在第一個 release 就失敗時使用；切換成功後可刪除。
+- 部署金鑰在主機上以 forced command（`deploy/ssh-gate.sh`）限制，只能執行 `deploy-api <sha>`，無法取得 shell 或轉發 port。
+
+GitHub `production` environment secrets：`EC2_HOST`、`EC2_USER`、`EC2_SSH_KEY`、`EC2_KNOWN_HOSTS`。
+
+### 主機配置（EC2 Ubuntu 20.04）
+
+| 項目 | 位置 |
+|------|------|
+| 正式設定 | `~/rental-housing/api/shared/.env`（權限 600，不進版控） |
+| 目前版本 | `~/rental-housing/api/current` → `releases/<sha>` |
+| pm2 | `~/ecosystem.config.js` 的 `rental`（Node 22，與 `stock` 各自固定 Node 版本） |
+| nginx | `/etc/nginx/sites-enabled/api.rental.imallenlai.com`（參考 `deploy/nginx/`） |
+| 舊版（Express） | `~/rental-housing/api-judicial-cases`（保留以備緊急回退） |
+
+### 手動回滾
+
+```bash
+cd ~/rental-housing/api
+ls -1dt releases/*/                         # 找到要回去的版本
+ln -sfn ~/rental-housing/api/releases/<sha> current.next && mv -Tf current.next current
+pm2 restart rental && curl -s http://127.0.0.1:3010/v1/health
 ```
 
-若 `comments` 與 `caseComments` 表尚無 `ip` 欄位，可執行下列 SQL 新增：
-
-```sql
-ALTER TABLE comments ADD COLUMN ip VARCHAR(45) AFTER content;
-ALTER TABLE caseComments ADD COLUMN ip VARCHAR(45) AFTER content;
-```
-
-若 `users` 表尚無以下欄位，可執行下列 SQL 新增：
-
-```sql
-ALTER TABLE users
-    ADD COLUMN password VARCHAR(255) NOT NULL AFTER phone,
-    ADD COLUMN displayName VARCHAR(100) NOT NULL AFTER name;
-```
-
-應用程式會從 `X-Forwarded-For` HTTP 頭解析使用者真實 IP，若無此頭則退
-回連線位址。
-
-## 開發流程
-
--   sudo service mysql start
--   npm i -g pm2 typescript
--   cd rental-housing/api-judicial-cases
--   tsc
--   pm2 start rental-housing/api-judicial-cases/ecosystem.config.js
-
----
-
-## 查詢項目
-
--   查詢姓名是否有在預警名單
-
-## nginx 設定
-
-sudo vim /etc/nginx/sites-enabled/api.rental.imallenlai.com
-
-```
-server {
-        listen       80;
-        server_name  api.rental.imallenlai.com;
-
-
-        location / {
-            proxy_pass http://127.0.0.1:3010;
-        }
-    }
-```
-
-## 技術文章參考
-
--   [certbot](https://www.digitalocean.com/community/tutorials/how-to-secure-nginx-with-let-s-encrypt-on-ubuntu-20-04)
--   [nginx](https://andy6804tw.github.io/2022/02/27/nginx-tutorial/)
-
-## 主機環境架設
-
--   在 AWS Route 53 新增 A 紀錄指到主機 IP
--   在 nginx 的設定檔新增 domain 的 nginx 設定檔
-
-`/etc/nginx/sites-enabled/api.rental.imallenlai.com`
-
-```
-server {
-        server_name  api.rental.imallenlai.com;
-
-
-        location / {
-            proxy_pass http://127.0.0.1:3010;
-        }
-
-}
-```
-
--   利用 certbot 建立 SSL 憑證，並且選擇 http 自動轉址
-
-```
-sudo certbot --nginx -d example.com
-```
-
--   確認 nginx 設定檔是否正確
-
-```
-sudo nginx -t
-```
-
--   確認 nginx 設定檔是否正確
-
-```
-sudo nginx -s reload
-```
-
-## 部署
-
--   本地上傳到遠端
-
-```
-scp -i ./pem -r build/* ec2@remote:/build
-```
-
-## 建立.env.local
-
-FIREBASE_API_KEY=
-FIREBASE_AUTH_DOMAIN=
-FIREBASE_PROJECT_ID=
-FIREBASE_STORAGE_BUCKET=
-FIREBASE_MESSAGING_SENDER_ID=
-FIREBASE_APP_ID=
-MEASUREMENT_ID=
-SESSION_SECRET=
-
-## 本地開發流程
-- 建立 mysql
-- 建立資料表
+資料庫還原：`gunzip -c backups/<file>.sql.gz | mysql -uroot rental`（migration 皆為加欄位 / 加索引，舊版程式可直接在新 schema 上執行）。

@@ -1,0 +1,109 @@
+name: CI / CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  test:
+    name: Lint / Typecheck / Test / Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Start MySQL 8.0 for E2E
+        run: docker compose -f docker-compose.test.yml up -d --wait
+
+      - run: npm run lint
+      - run: npm run typecheck
+
+      - name: Unit + E2E tests with coverage
+        run: npm run test:cov
+
+      - run: npm run build
+
+      - name: Package release
+        if: github.event_name != 'pull_request'
+        run: tar -czf release.tgz dist package.json package-lock.json deploy/remote-deploy.sh
+
+      - uses: actions/upload-artifact@v4
+        if: github.event_name != 'pull_request'
+        with:
+          name: release
+          path: release.tgz
+          retention-days: 7
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage
+          path: coverage/lcov-report
+          retention-days: 7
+
+  deploy:
+    name: Deploy to EC2
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: production
+      url: https://api.rental.imallenlai.com/v1/health
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release
+
+      - name: Configure SSH
+        env:
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          EC2_KNOWN_HOSTS: ${{ secrets.EC2_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$EC2_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$EC2_KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      - name: Upload and activate release
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o ServerAliveInterval=15 \
+            "$EC2_USER@$EC2_HOST" "deploy-api ${GITHUB_SHA}" < release.tgz
+
+      - name: Public health check
+        run: |
+          for attempt in $(seq 1 10); do
+            if curl -fsS --max-time 5 https://api.rental.imallenlai.com/v1/health | grep -q '"db":"up"'; then
+              echo "API is healthy"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "public health check failed" >&2
+          exit 1
+
+      - name: Remove SSH key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
