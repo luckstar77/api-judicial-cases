@@ -103,6 +103,7 @@ E2E 測試會先跑全部 migration，Firebase 與 S3 以 mock 取代（token �
   4. 30 秒內 `/v1/health` 必須回 `db: up`，否則自動切回上一版；第一個 release 就失敗時，改用 `shared/legacy-ecosystem.config.js` 恢復舊版服務
   5. 保留最近 5 個 release
 - 重跑已經在線上的同一個 commit 不會重新部署（避免覆寫執行中的檔案）。讀不到 migration 狀態時直接中止部署。
+- `shared/legacy-ecosystem.config.js`：舊版 Express 的 pm2 設定（絕對路徑 `cwd`），只在第一個 release 就失敗時使用；切換成功後可刪除。
 - 部署金鑰在主機上以 forced command（`deploy/ssh-gate.sh`）限制，只能執行 `deploy-api <sha>`，無法取得 shell 或轉發 port。
 
 GitHub `production` environment secrets：`EC2_HOST`、`EC2_USER`、`EC2_SSH_KEY`、`EC2_KNOWN_HOSTS`。

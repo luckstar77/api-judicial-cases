@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Patch, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { AuthThrottle } from '../auth/auth.throttle';
 import { ApiException } from '../common/api/api.exception';
 import { ErrorCodes } from '../common/api/error-codes';
 import { ApiSuccessResponse, success } from '../common/api/response';
@@ -26,7 +27,9 @@ export class UserController {
     }
   }
 
+  /** 會驗證目前密碼，與登入同樣限流，避免拿到 token 的人暴力猜密碼 */
   @Patch('me')
+  @AuthThrottle()
   @ApiOkResponse({ type: AuthResultResponse })
   async updateMe(@CurrentUser() user: RequestUser, @Body() body: UpdateMeBody): Promise<ApiSuccessResponse<AuthResultResponse>> {
     try {

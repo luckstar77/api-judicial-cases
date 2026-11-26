@@ -37,9 +37,15 @@ export class StorageService {
     this.bucket = config.get('S3_BUCKET_NAME', { infer: true });
   }
 
-  /** 呼叫端須先以 detectImageType 確認 mimetype 與檔案內容相符 */
+  /** 呼叫端須先以 detectImageType 確認 mimetype 與檔案內容相符；任一張失敗時刪掉已上傳的其他張再拋出錯誤 */
   async uploadCaseImages(files: UploadableFile[]): Promise<string[]> {
-    return Promise.all(files.map((file) => this.uploadCaseImage(file)));
+    const results = await Promise.allSettled(files.map((file) => this.uploadCaseImage(file)));
+    const failure = results.find((result): result is PromiseRejectedResult => result.status === 'rejected');
+    if (!failure) return results.map((result) => (result as PromiseFulfilledResult<string>).value);
+
+    const uploaded = results.filter((result): result is PromiseFulfilledResult<string> => result.status === 'fulfilled').map((result) => result.value);
+    await this.deleteByUrls(uploaded);
+    throw failure.reason;
   }
 
   /** 後續步驟失敗時清掉已上傳的圖片；清除失敗只記錄，不影響原本的錯誤 */

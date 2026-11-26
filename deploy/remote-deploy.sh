@@ -121,15 +121,17 @@ if ! healthy; then
     else
       log "rollback ALSO unhealthy, manual action required"
     fi
-  elif [[ -z "$PREVIOUS" && -f "$LEGACY_ECOSYSTEM" ]]; then
-    # 第一個 release 就失敗：拿掉 current，讓下一次部署仍視為第一次，並恢復舊版服務
-    log "first release failed; restoring the pre-release app from $LEGACY_ECOSYSTEM"
+  elif [[ -z "$PREVIOUS" ]]; then
+    # 第一個 release 就失敗：拿掉 current，讓下一次部署仍視為第一次（不會把壞掉的版本當成可回滾的上一版）
     rm -f "$CURRENT"
-    "$PM2" delete "$PM2_APP" >/dev/null 2>&1 || true
-    "$PM2" start "$LEGACY_ECOSYSTEM" --only "$PM2_APP" >/dev/null
-    "$PM2" save >/dev/null
-  else
-    log "no previous release to roll back to, manual action required"
+    if [[ -f "$LEGACY_ECOSYSTEM" ]]; then
+      log "first release failed; restoring the pre-release app from $LEGACY_ECOSYSTEM"
+      "$PM2" delete "$PM2_APP" >/dev/null 2>&1 || true
+      "$PM2" start "$LEGACY_ECOSYSTEM" --only "$PM2_APP" >/dev/null
+      "$PM2" save >/dev/null
+    else
+      log "first release failed and $LEGACY_ECOSYSTEM is missing, manual action required"
+    fi
   fi
   fail "deploy of $SHA failed"
 fi

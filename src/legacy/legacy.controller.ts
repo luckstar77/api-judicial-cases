@@ -210,6 +210,7 @@ export class LegacyController {
   }
 
   @Put('user')
+  @AuthThrottle()
   @UseGuards(JwtAuthGuard)
   async updateUser(@CurrentUser() user: RequestUser, @Body() body: LegacyUpdateUserBody): Promise<LegacyUserWithToken> {
     try {

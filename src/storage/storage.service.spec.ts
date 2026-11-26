@@ -51,4 +51,24 @@ describe('StorageService', () => {
     expect(send).not.toHaveBeenCalled();
     await expect(service.deleteByUrls(['https://images-bucket.s3.amazonaws.com/cases/a.png'])).resolves.toBeUndefined();
   });
+
+  it('should delete the images that did upload when another upload fails', async () => {
+    const failure = new Error('timeout');
+    const send = jest.spyOn(S3Client.prototype, 'send').mockImplementation(async (command: unknown) => {
+      if (command instanceof PutObjectCommand && command.input.ContentType === 'image/jpeg') throw failure;
+      return {};
+    });
+    const service = new StorageService(config);
+
+    await expect(
+      service.uploadCaseImages([
+        { buffer: Buffer.from('a'), mimetype: 'image/png' },
+        { buffer: Buffer.from('b'), mimetype: 'image/jpeg' },
+      ]),
+    ).rejects.toBe(failure);
+
+    const deletes = send.mock.calls.map(([command]) => command).filter((command) => command instanceof DeleteObjectsCommand) as DeleteObjectsCommand[];
+    expect(deletes).toHaveLength(1);
+    expect(deletes[0].input.Delete?.Objects).toEqual([{ Key: expect.stringMatching(/^cases\/.+\.png$/) }]);
+  });
 });

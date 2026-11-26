@@ -1,7 +1,7 @@
 import request from 'supertest';
 import { DataSource } from 'typeorm';
 import { NestExpressApplication } from '@nestjs/platform-express';
-import { CaseComment, User } from '../database/entities';
+import { Case, CaseComment, User } from '../database/entities';
 import { createCase, createJudgment, createJudgmentComment, createUser, fakeFirebaseUid, fakeTaiwanPhone, legacySha256 } from '../database/test/factory';
 import { clearAllDataInDB } from '../database/test/utils';
 import { fakeFirebaseToken } from '../firebase/test/mock';
@@ -159,6 +159,41 @@ describe('LegacyController E2E', () => {
         .expect(201);
 
       expect(res.body).toEqual({ id: expect.any(Number) });
+    });
+
+    it('POST /case should return 400 when an image is not what it claims to be', async () => {
+      const user = await createUser(dataSource);
+
+      await request(app.getHttpServer())
+        .post('/case')
+        .set('Authorization', bearer(tokenService, user.uid))
+        .field('title', '標題')
+        .field('content', '內容')
+        .field('location', '台北市')
+        .field('district', '大安區')
+        .field('rent', '12000')
+        .field('defendantName', '某人')
+        .attach('images', Buffer.from('<html></html>'), { filename: 'x.jpg', contentType: 'image/jpeg' })
+        .expect(400);
+
+      expect(await dataSource.getRepository(Case).count()).toBe(0);
+    });
+
+    it('POST /case should accept the 臺 spellings the old frontend sends', async () => {
+      const user = await createUser(dataSource);
+
+      const res = await request(app.getHttpServer())
+        .post('/case')
+        .set('Authorization', bearer(tokenService, user.uid))
+        .field('title', '標題')
+        .field('content', '內容')
+        .field('location', '雲林縣')
+        .field('district', '臺西鄉')
+        .field('rent', '12000')
+        .field('defendantName', '某人')
+        .expect(201);
+
+      await expect(dataSource.getRepository(Case).findOneByOrFail({ id: res.body.id })).resolves.toMatchObject({ district: '台西鄉' });
     });
   });
 
