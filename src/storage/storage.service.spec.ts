@@ -4,10 +4,8 @@ import { EnvironmentVariables } from '../config/env.validation';
 import { StorageService } from './storage.service';
 
 describe('StorageService', () => {
-  const config = { get: jest.fn((key: string) => (key === 'S3_BUCKET_NAME' ? 'images-bucket' : 'ap-northeast-1')) } as unknown as ConfigService<
-    EnvironmentVariables,
-    true
-  >;
+  const settings: Record<string, string> = { S3_BUCKET_NAME: 'images-bucket', AWS_REGION: 'ap-east-2' };
+  const config = { get: jest.fn((key: string) => settings[key]) } as unknown as ConfigService<EnvironmentVariables, true>;
 
   afterEach(() => {
     jest.restoreAllMocks();
@@ -26,7 +24,7 @@ describe('StorageService', () => {
     const command = send.mock.calls[0][0] as PutObjectCommand;
     expect(command.input).toMatchObject({ Bucket: 'images-bucket', ContentType: 'image/png', CacheControl: 'public, max-age=31536000, immutable' });
     expect(command.input.Key).toMatch(/^cases\/\d+-[0-9a-f-]{36}\.png$/);
-    expect(urls[0]).toBe(`https://images-bucket.s3.amazonaws.com/${command.input.Key}`);
+    expect(urls[0]).toBe(`https://images-bucket.s3.ap-east-2.amazonaws.com/${command.input.Key}`);
     expect(urls[1]).toMatch(/\.jpg$/);
   });
 
@@ -34,11 +32,26 @@ describe('StorageService', () => {
     const send = jest.spyOn(S3Client.prototype, 'send').mockImplementation(async () => ({}));
     const service = new StorageService(config);
 
-    await service.deleteByUrls(['https://images-bucket.s3.amazonaws.com/cases/a.png', 'https://evil.example.com/cases/b.png']);
+    await service.deleteByUrls([
+      'https://images-bucket.s3.ap-east-2.amazonaws.com/cases/a.png',
+      'https://evil.example.com/cases/b.png',
+      'https://other-bucket.s3.ap-east-2.amazonaws.com/cases/c.png',
+      'https://images-bucket.s3.ap-east-2.amazonaws.com.evil.example.com/cases/d.png',
+    ]);
 
     expect(send).toHaveBeenCalledTimes(1);
     const command = send.mock.calls[0][0] as DeleteObjectsCommand;
     expect(command.input).toEqual({ Bucket: 'images-bucket', Delete: { Objects: [{ Key: 'cases/a.png' }] } });
+  });
+
+  it('should still recognise urls in the legacy global endpoint format', async () => {
+    const send = jest.spyOn(S3Client.prototype, 'send').mockImplementation(async () => ({}));
+    const service = new StorageService(config);
+
+    await service.deleteByUrls(['https://images-bucket.s3.amazonaws.com/cases/old.png']);
+
+    const command = send.mock.calls[0][0] as DeleteObjectsCommand;
+    expect(command.input.Delete?.Objects).toEqual([{ Key: 'cases/old.png' }]);
   });
 
   it('should not call S3 when there is nothing to delete and swallow delete failures', async () => {
@@ -49,7 +62,7 @@ describe('StorageService', () => {
 
     await service.deleteByUrls([]);
     expect(send).not.toHaveBeenCalled();
-    await expect(service.deleteByUrls(['https://images-bucket.s3.amazonaws.com/cases/a.png'])).resolves.toBeUndefined();
+    await expect(service.deleteByUrls(['https://images-bucket.s3.ap-east-2.amazonaws.com/cases/a.png'])).resolves.toBeUndefined();
   });
 
   it('should delete the images that did upload when another upload fails', async () => {

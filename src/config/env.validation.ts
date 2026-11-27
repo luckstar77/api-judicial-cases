@@ -63,7 +63,7 @@ export class EnvironmentVariables {
 
   @IsString()
   @IsNotEmpty()
-  AWS_REGION = 'ap-northeast-1';
+  AWS_REGION = 'ap-east-2';
 
   @IsString()
   @IsNotEmpty()
