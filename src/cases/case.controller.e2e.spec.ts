@@ -156,7 +156,7 @@ describe('CaseController E2E', () => {
         rent: 18000,
         defendantName: '陳惡客',
         ip: '203.0.113.9',
-        imageUrls: ['https://test-bucket.s3.amazonaws.com/cases/test-0.jpg'],
+        imageUrls: ['https://test-bucket.s3.ap-east-2.amazonaws.com/cases/test-0.jpg'],
       });
     });
 

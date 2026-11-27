@@ -28,13 +28,17 @@ export class StorageService {
   private readonly logger = new Logger(StorageService.name);
   private readonly client: S3Client;
   private readonly bucket: string;
+  /** 2019 年 3 月後開放的區域（例如 ap-east-2 台北）不支援舊式全球網址 https://<bucket>.s3.amazonaws.com，所以網址一律帶區域 */
+  private readonly publicUrlPrefix: string;
 
   constructor(config: ConfigService<EnvironmentVariables, true>) {
+    const region = config.get('AWS_REGION', { infer: true });
     this.client = new S3Client({
-      region: config.get('AWS_REGION', { infer: true }),
+      region,
       requestHandler: { connectionTimeout: S3_CONNECTION_TIMEOUT_MS, requestTimeout: S3_REQUEST_TIMEOUT_MS },
     });
     this.bucket = config.get('S3_BUCKET_NAME', { infer: true });
+    this.publicUrlPrefix = `https://${this.bucket}.s3.${region}.amazonaws.com/`;
   }
 
   /** 呼叫端須先以 detectImageType 確認 mimetype 與檔案內容相符；任一張失敗時刪掉已上傳的其他張再拋出錯誤 */
@@ -50,8 +54,7 @@ export class StorageService {
 
   /** 後續步驟失敗時清掉已上傳的圖片；清除失敗只記錄，不影響原本的錯誤 */
   async deleteByUrls(urls: string[]): Promise<void> {
-    const prefix = `https://${this.bucket}.s3.amazonaws.com/`;
-    const keys = urls.filter((url) => url.startsWith(prefix)).map((url) => url.slice(prefix.length));
+    const keys = urls.filter((url) => url.startsWith(this.publicUrlPrefix)).map((url) => url.slice(this.publicUrlPrefix.length));
     if (keys.length === 0) return;
     try {
       await this.client.send(new DeleteObjectsCommand({ Bucket: this.bucket, Delete: { Objects: keys.map((Key) => ({ Key })) } }));
@@ -66,6 +69,6 @@ export class StorageService {
     await this.client.send(
       new PutObjectCommand({ Bucket: this.bucket, Key: key, Body: file.buffer, ContentType: file.mimetype, CacheControl: IMMUTABLE_CACHE_CONTROL }),
     );
-    return `https://${this.bucket}.s3.amazonaws.com/${key}`;
+    return `${this.publicUrlPrefix}${key}`;
   }
 }

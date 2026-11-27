@@ -96,7 +96,7 @@ describe('CaseService', () => {
       await service.create({ userId: 'u', ip: '1.1.1.1', body, images: [pngImage] });
 
       expect(databaseService.caseRepository.create).toHaveBeenCalledWith(
-        expect.objectContaining({ imageUrls: ['https://test-bucket.s3.amazonaws.com/cases/test-0.jpg'] }),
+        expect.objectContaining({ imageUrls: ['https://test-bucket.s3.ap-east-2.amazonaws.com/cases/test-0.jpg'] }),
       );
     });
 
@@ -113,7 +113,7 @@ describe('CaseService', () => {
       databaseService.caseRepository.create.mockRejectedValue(failure);
 
       await expect(service.create({ userId: 'u', ip: '1.1.1.1', body, images: [pngImage] })).rejects.toBe(failure);
-      expect(mockStorageService.deleteByUrls).toHaveBeenCalledWith(['https://test-bucket.s3.amazonaws.com/cases/test-0.jpg']);
+      expect(mockStorageService.deleteByUrls).toHaveBeenCalledWith(['https://test-bucket.s3.ap-east-2.amazonaws.com/cases/test-0.jpg']);
     });
   });
 
